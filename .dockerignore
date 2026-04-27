@@ -1,0 +1,8 @@
+node_modules
+tests
+.git
+.claude
+*.md
+.dockerignore
+Dockerfile
+jest.config.*

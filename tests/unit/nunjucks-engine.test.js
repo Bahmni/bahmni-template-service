@@ -63,6 +63,29 @@ describe('NunjucksEngine', () => {
     expect(html).toContain('data:image/png;base64,'); // real barcode generated
   });
 
+  test('asset filter returns data URI for images', () => {
+    const assetsDir = path.join(fixtureDir, 'assets');
+    fs.mkdirSync(assetsDir, { recursive: true });
+    const pngData = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    fs.writeFileSync(path.join(assetsDir, 'test-logo.png'), pngData);
+
+    const engine = new NunjucksEngine(fixtureDir);
+    fs.writeFileSync(path.join(fixtureDir, 'asset-test.html'),
+      '<img src="{{ \'test-logo.png\' | asset }}">');
+    const html = engine.render('asset-test.html', {});
+    expect(html).toContain('data:image/png;base64,');
+  });
+
+  test('asset filter throws on unquoted variable', () => {
+    const engine = new NunjucksEngine(fixtureDir);
+    fs.writeFileSync(path.join(fixtureDir, 'asset-bad.html'),
+      '{{ missingVar | asset }}');
+    expect(() => engine.render('asset-bad.html', {})).toThrow('asset filter expects a quoted string');
+  });
+
   test('fhirpathEvaluate filter is available', () => {
     const engine = new NunjucksEngine(fixtureDir);
     fs.writeFileSync(path.join(fixtureDir, 'fp.html'),

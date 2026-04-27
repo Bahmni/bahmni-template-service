@@ -2,6 +2,7 @@ import nunjucks from 'nunjucks';
 import { ageFilter, dateFormat, dateTimeFormat, dateDiff, numberFormat, capitalize, truncate } from '../utils/builtins.js';
 import fhirpath from 'fhirpath';
 import { generateBarcode, generateQrcode } from './barcode.js';
+import AssetService from './asset-service.js';
 
 export default class NunjucksEngine {
   constructor(templatesDir, i18n) {
@@ -9,6 +10,7 @@ export default class NunjucksEngine {
       new nunjucks.FileSystemLoader(templatesDir, { noCache: true }),
       { autoescape: false }
     );
+    this.assetService = new AssetService(templatesDir);
     this.registerFilters(i18n);
   }
 
@@ -24,6 +26,8 @@ export default class NunjucksEngine {
     if (i18n) {
       this.env.addFilter('t', i18n.createFilter());
     }
+
+    this.env.addFilter('asset', (relativePath) => this.assetService.toDataUri(relativePath));
 
     this.env.addFilter('fhirpathEvaluate', (resource, expression) => {
       return fhirpath.evaluate(resource, expression);

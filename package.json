@@ -1,0 +1,28 @@
+{
+  "name": "bahmni-template-service",
+  "version": "1.0.0",
+  "description": "Configurable print and templating microservice for Bahmni",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "NODE_OPTIONS='--experimental-vm-modules' jest --verbose",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch",
+    "test:pdf": "NODE_OPTIONS='--experimental-vm-modules' jest tests/unit/pdf-pool.test.js --testTimeout=30000 --verbose"
+  },
+  "type": "module",
+  "license": "MPL-2.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "bwip-js": "^4.9.0",
+    "express": "^5.2.1",
+    "fhirpath": "^4.9.2",
+    "nunjucks": "^3.2.4",
+    "playwright": "^1.59.1"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  }
+}

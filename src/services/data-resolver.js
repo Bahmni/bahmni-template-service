@@ -1,5 +1,6 @@
 import config from '../config.js';
 import { DataFetchError } from '../errors.js';
+import logger from '../logger.js';
 
 if (!config.tlsRejectUnauthorized) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -52,6 +53,7 @@ export async function resolve(sources, context, sessionToken) {
   const results = await Promise.allSettled(
     entries.map(async ([name, source]) => {
       const url = buildUrl(source, context);
+      logger.info('OpenMRS fetch', { source: name, api: source.api, url });
       const data = await fetchSource(url, sessionToken);
       return [name, data];
     })

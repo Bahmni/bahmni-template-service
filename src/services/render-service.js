@@ -1,6 +1,7 @@
 import path from 'path';
 import config from '../config.js';
 import { ValidationError } from '../errors.js';
+import logger from '../logger.js';
 import TemplateStore from './template-store.js';
 import I18n from './i18n.js';
 import NunjucksEngine from './nunjucks-engine.js';
@@ -22,20 +23,28 @@ export default class RenderService {
       throw new ValidationError('templateId is required');
     }
 
+    logger.debug('Input data', { templateId, context: reqContext, data: reqData });
+
     const template = this.store.get(templateId);
 
     const finalData = await this.resolveData(template.dataConfig, reqContext, reqData, sessionCookie);
+
+    logger.debug('Resolved data', { templateId, finalData });
 
     const computed = runComputed(template.computedSource, finalData);
 
     const resolvedLocale = this.i18n.resolve(locale);
 
-    const html = await this.engine.renderAsync(template.templatePath, {
+    const templateContext = {
       ...finalData,
       computed,
       locale: resolvedLocale,
       now: new Date().toISOString(),
-    });
+    };
+
+    logger.debug('Template context', { templateId, templateContext });
+
+    const html = await this.engine.renderAsync(template.templatePath, templateContext);
 
     return this.formatOutput(html, format, template);
   }

@@ -1,5 +1,6 @@
 import createApp from './app.js';
 import config from './config.js';
+import logger from './logger.js';
 import { templateService } from './routes/templates.js';
 import { init as initPdfPool, shutdown as shutdownPdfPool, isReady as isPdfReady } from './services/pdf-pool.js';
 
@@ -14,17 +15,17 @@ const app = createApp({
 
 async function start() {
   await initPdfPool(config.maxConcurrentPdf);
-  console.log(`PDF pool initialized (concurrency: ${config.maxConcurrentPdf})`);
+  logger.info('PDF pool initialized', { concurrency: config.maxConcurrentPdf });
 
   return app.listen(config.port, () => {
-    console.log(`Template service listening on port ${config.port}`);
+    logger.info('Template service listening', { port: config.port });
   });
 }
 
 const server = await start();
 
 async function gracefulShutdown(signal) {
-  console.log(`Received ${signal}, shutting down...`);
+  logger.info('Shutting down', { signal });
   server.close();
   try {
     await shutdownPdfPool();

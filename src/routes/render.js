@@ -1,16 +1,22 @@
 import { Router } from 'express';
 import RenderService from '../services/render-service.js';
 import { ValidationError, TemplateNotFoundError, TemplateDisabledError, DataFetchError } from '../errors.js';
+import logger from '../logger.js';
 
 const router = Router();
 const renderService = new RenderService();
 
 router.post('/', async (req, res) => {
+  const { templateId, format, locale } = req.body;
+  logger.info('Render request received', { templateId, format, locale, method: req.method, url: req.originalUrl });
+
   try {
     const result = await renderService.render({
       ...req.body,
       sessionCookie: extractSessionCookie(req.headers.cookie),
     });
+
+    logger.info('Render completed', { templateId, format: result.type });
 
     if (result.type === 'pdf') {
       res.setHeader('Content-Type', 'application/pdf');
@@ -26,6 +32,7 @@ router.post('/', async (req, res) => {
     res.send(result.body);
   } catch (err) {
     const status = errorToStatus(err);
+    logger.error('Render failed', { templateId, status, error: err.message });
     res.status(status).json({ error: err.message });
   }
 });

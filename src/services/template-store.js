@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { TemplateNotFoundError, TemplateDisabledError } from '../errors.js';
-import console from 'console';
 
 export default class TemplateStore {
   constructor(templatesDir) {
@@ -13,7 +12,6 @@ export default class TemplateStore {
     const registryPath = path.join(this.templatesDir, 'templates.json');
     const raw = fs.readFileSync(registryPath, 'utf-8');
     this.registry = JSON.parse(raw).templates;
-    console.log(`Loaded ${this.registry.length} templates from registry`);
   }
 
   ensureLoaded() {

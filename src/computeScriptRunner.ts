@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ValidationError } from './errors';
 import logger from './logger';
 
 const OPENMRS_URL = process.env.OPENMRS_URL ?? 'http://openmrs:8080';
@@ -73,6 +74,7 @@ export async function runComputeScript(
       compute?: (helpers: {
         context: Record<string, string> | undefined;
         openmrs: ReturnType<typeof buildOpenmrsClient>;
+        ValidationError: typeof ValidationError;
       }) => unknown;
     };
 
@@ -82,7 +84,7 @@ export async function runComputeScript(
     }
 
     const openmrs = buildOpenmrsClient(auth);
-    const result = await Promise.resolve(mod.compute({ context, openmrs }));
+    const result = await Promise.resolve(mod.compute({ context, openmrs, ValidationError }));
 
     if (result == null || typeof result !== 'object' || Array.isArray(result)) {
       logger.warn(
@@ -94,6 +96,7 @@ export async function runComputeScript(
 
     return result as Record<string, unknown>;
   } catch (err) {
+    if (err instanceof ValidationError) throw err;
     logger.error({ scriptPath, err }, 'Error running compute script');
     return {};
   }

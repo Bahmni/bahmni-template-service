@@ -1,10 +1,11 @@
 import express, { Request, Response } from 'express';
 import { toHtml } from './adapters/htmlAdapter';
 import { runComputeScript } from './computeScriptRunner';
+import { ValidationError } from './errors';
 import logger from './logger';
 import { render } from './renderer';
 import { templateStore } from './templateStore';
-import { RenderRequest, ErrorResponse } from './types';
+import { RenderRequest, RenderResponse, ErrorResponse } from './types';
 
 const app = express();
 
@@ -89,8 +90,7 @@ app.post(
         template.config,
       );
 
-      res.set('Content-Type', 'text/html; charset=utf-8');
-      return res.send(toHtml(html));
+      return res.json({ html: toHtml(html) } satisfies RenderResponse);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
 
@@ -116,6 +116,10 @@ app.post(
 
       if (message.includes('OpenMRS resource not found')) {
         return res.status(404).json({ error: message } satisfies ErrorResponse);
+      }
+
+      if (err instanceof ValidationError) {
+        return res.status(400).json({ error: message } satisfies ErrorResponse);
       }
 
       return res.status(500).json({

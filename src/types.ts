@@ -38,6 +38,10 @@ export interface TemplateListResponse {
   }>;
 }
 
+export interface RenderResponse {
+  html: string;
+}
+
 export interface ErrorResponse {
   error: string;
   detail?: string;

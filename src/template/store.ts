@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import logger from './logger';
-import { LoadedTemplate, TemplateEntry, TemplateRegistry } from './types';
+import logger from '../logger';
+import { LoadedTemplate, TemplateEntry, TemplateRegistry } from '../types';
 
 function templatesDir(): string {
   return process.env.TEMPLATES_DIR ?? '/etc/bahmni_config/print-templates';
@@ -59,18 +59,19 @@ class TemplateStore {
     }
 
     const templatePath = path.join(entry.folder, 'template.html');
+    const dataConfigPath = path.join(templateDir, 'data-config.json');
     const computeScriptPath = path.join(templateDir, 'compute.js');
+    const cssPath = path.join(templateDir, 'styles.css');
 
     return {
       id: entry.id,
       name: entry.name,
       templatePath,
+      dataConfigPath: fs.existsSync(dataConfigPath) ? dataConfigPath : undefined,
       computeScriptPath: fs.existsSync(computeScriptPath)
         ? computeScriptPath
         : undefined,
-      config: entry.config ?? {},
-      triggers: entry.triggers ?? [],
-      outputFormats: entry.outputFormats ?? ['html'],
+      stylesheetPath: fs.existsSync(cssPath) ? cssPath : undefined,
     };
   }
 

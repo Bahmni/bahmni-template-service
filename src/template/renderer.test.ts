@@ -30,14 +30,13 @@ describe('renderer', () => {
   describe('barcode filter', () => {
     it('emits a real PNG data URL (regression test for bwip-js v3 Promise bug)', async () => {
       const t = withTempTemplates({
-        'demo/template.html': `{{ compute.value | barcode('code128', 40) }}`,
+        'demo/template.html': `{{ computed.value | barcode('code128', 40) }}`,
       });
       try {
         const html = await render(
           'demo/template.html',
           { value: 'ABC-123' },
           'en',
-          {},
         );
         expect(html).toMatch(/<img src="data:image\/png;base64,/);
         const m = html.match(/base64,([A-Za-z0-9+/=]+)"/);
@@ -55,14 +54,13 @@ describe('renderer', () => {
 
     it('falls back to a span when barcode generation fails', async () => {
       const t = withTempTemplates({
-        'demo/template.html': `{{ compute.value | barcode('not-a-real-bcid', 40) }}`,
+        'demo/template.html': `{{ computed.value | barcode('not-a-real-bcid', 40) }}`,
       });
       try {
         const html = await render(
           'demo/template.html',
           { value: 'X' },
           'en',
-          {},
         );
         expect(html).toContain('<span class="barcode-fallback">X</span>');
       } finally {
@@ -78,7 +76,7 @@ describe('renderer', () => {
         'demo/template.html': `{{ 'HELLO' | t }}`,
       });
       try {
-        const first = await render('demo/template.html', {}, 'en', {});
+        const first = await render('demo/template.html', {}, 'en');
         expect(first.trim()).toBe('Hi');
 
         const newPath = path.join(t.dir, '_i18n', 'en.json');
@@ -86,7 +84,7 @@ describe('renderer', () => {
         const future = new Date(Date.now() + 2000);
         fs.utimesSync(newPath, future, future);
 
-        const second = await render('demo/template.html', {}, 'en', {});
+        const second = await render('demo/template.html', {}, 'en');
         expect(second.trim()).toBe('Howdy');
       } finally {
         t.cleanup();
@@ -98,7 +96,7 @@ describe('renderer', () => {
         'demo/template.html': `{{ 'MISSING_KEY' | t }}`,
       });
       try {
-        const html = await render('demo/template.html', {}, 'en', {});
+        const html = await render('demo/template.html', {}, 'en');
         expect(html.trim()).toBe('MISSING_KEY');
       } finally {
         t.cleanup();

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { templateStore } from './templateStore';
+import { templateStore } from './store';
 
 function setupTemplatesDir(): { dir: string; cleanup: () => void } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tstore-'));
@@ -43,9 +43,6 @@ describe('templateStore', () => {
               id: 'A',
               name: 'A',
               folder: 'a',
-              category: 'x',
-              outputFormats: ['html'],
-              triggers: [],
             },
           ],
         }),
@@ -78,9 +75,6 @@ describe('templateStore', () => {
               id: 'A',
               name: 'A',
               folder: 'a',
-              category: 'x',
-              outputFormats: ['html'],
-              triggers: [],
             },
           ],
         }),
@@ -96,17 +90,11 @@ describe('templateStore', () => {
               id: 'A',
               name: 'A',
               folder: 'a',
-              category: 'x',
-              outputFormats: ['html'],
-              triggers: [],
             },
             {
               id: 'B',
               name: 'B',
               folder: 'b',
-              category: 'y',
-              outputFormats: ['html'],
-              triggers: [],
             },
           ],
         }),
@@ -144,9 +132,6 @@ describe('templateStore', () => {
               id: 'PRESCRIPTION',
               name: 'Prescription',
               folder: 'rx',
-              category: 'medications',
-              outputFormats: ['html'],
-              triggers: [{ label: 'Print' }],
             },
           ],
         }),
@@ -174,9 +159,6 @@ describe('templateStore', () => {
               id: 'A',
               name: 'A',
               folder: 'a',
-              category: 'x',
-              outputFormats: ['html'],
-              triggers: [],
             },
           ],
         }),

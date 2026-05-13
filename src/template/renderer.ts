@@ -3,9 +3,8 @@ import path from 'path';
 import * as bwipjs from 'bwip-js';
 import nunjucks from 'nunjucks';
 import QRCodeSVG from 'qrcode-svg';
-import { computeAge } from './builtins/clinical';
-import { evaluateFhirPath } from './builtins/fhirPath';
-import logger from './logger';
+import logger from '../logger';
+import { evaluateFhirPath } from './fhirPath';
 
 function templatesDir(): string {
   return process.env.TEMPLATES_DIR ?? '/etc/bahmni_config/print-templates';
@@ -23,7 +22,7 @@ type BarcodeCallback = (
 
 const translationCache = new Map<string, TranslationCacheEntry>();
 
-function loadTranslations(locale: string): Record<string, string> {
+export function loadTranslations(locale: string): Record<string, string> {
   const filePath = path.join(templatesDir(), '_i18n', `${locale}.json`);
   try {
     const stat = fs.statSync(filePath);
@@ -146,21 +145,30 @@ function createEnvironment(locale: string): nunjucks.Environment {
   );
 
   env.addFilter('dateFormat', (value: string): string => {
+    if (!value) return '';
     try {
       const date = new Date(value);
       if (isNaN(date.getTime())) return value ?? '';
-      return date.toLocaleDateString(locale, {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = date.toLocaleDateString(locale, { month: 'long' });
+      const year = date.getFullYear();
+      return `${day} ${month} ${year}`;
     } catch {
       return value ?? '';
     }
   });
 
   env.addFilter('age', (birthDate: string): string => {
-    return computeAge(birthDate);
+    if (!birthDate) return '';
+    const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) return '';
+    const now = new Date();
+    const years = now.getFullYear() - birth.getFullYear();
+    const months = years * 12 + (now.getMonth() - birth.getMonth());
+    const days = Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+    if (days < 30) return `${days} day${days !== 1 ? 's' : ''}`;
+    if (months < 24) return `${months} month${months !== 1 ? 's' : ''}`;
+    return `${years} year${years !== 1 ? 's' : ''}`;
   });
 
   env.addFilter(
@@ -180,9 +188,11 @@ function createEnvironment(locale: string): nunjucks.Environment {
 
 export function render(
   templatePath: string,
-  compute: Record<string, unknown>,
+  computed: Record<string, unknown>,
   locale: string,
-  config: Record<string, unknown>,
+  stylesheetPath?: string,
+  dataContext: Record<string, unknown> = {},
+  data: Record<string, unknown> = {},
 ): Promise<string> {
   const env = createEnvironment(locale);
 
@@ -190,14 +200,26 @@ export function render(
     env.render(
       templatePath,
       {
-        compute,
+        ...dataContext,
+        computed,
+        data,
         locale,
-        config,
         now: new Date(),
       },
       (err, html) => {
-        if (err) reject(err);
-        else resolve(html ?? '');
+        if (err) {
+          reject(err);
+          return;
+        }
+        let result = html ?? '';
+        if (stylesheetPath && fs.existsSync(stylesheetPath)) {
+          const css = fs.readFileSync(stylesheetPath, 'utf-8');
+          const tag = `<style>\n${css}\n</style>`;
+          result = result.includes('</head>')
+            ? result.replace('</head>', `${tag}\n</head>`)
+            : `${tag}\n${result}`;
+        }
+        resolve(result);
       },
     );
   });

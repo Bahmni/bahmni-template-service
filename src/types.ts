@@ -2,24 +2,39 @@ export interface TemplateEntry {
   id: string;
   name: string;
   folder: string;
-  category: string;
-  outputFormats: Array<'html'>;
-  triggers: Array<{ label: string }>;
-  config?: Record<string, unknown>;
 }
 
 export interface TemplateRegistry {
   templates: TemplateEntry[];
 }
 
+// ---------------------------------------------------------------------------
+// data-config.json types
+// ---------------------------------------------------------------------------
+
+export interface DataSource {
+  api: 'fhir' | 'rest';
+  resource: string;
+  params?: Record<string, string | string[]>;
+}
+
+export interface DataConfig {
+  sources?: Record<string, DataSource>;
+}
+
+export type ResolvedSources = Record<string, unknown>;
+
+// ---------------------------------------------------------------------------
+// Runtime types
+// ---------------------------------------------------------------------------
+
 export interface LoadedTemplate {
   id: string;
   name: string;
   templatePath: string;
+  dataConfigPath?: string;
   computeScriptPath?: string;
-  config: Record<string, unknown>;
-  triggers: TemplateEntry['triggers'];
-  outputFormats: TemplateEntry['outputFormats'];
+  stylesheetPath?: string;
 }
 
 export interface RenderRequest {
@@ -27,14 +42,13 @@ export interface RenderRequest {
   format?: 'html';
   locale?: string;
   context?: Record<string, string>;
+  data?: Record<string, unknown>;
 }
 
 export interface TemplateListResponse {
   templates: Array<{
     id: string;
     name: string;
-    triggers: TemplateEntry['triggers'];
-    outputFormats: TemplateEntry['outputFormats'];
   }>;
 }
 
@@ -43,6 +57,6 @@ export interface RenderResponse {
 }
 
 export interface ErrorResponse {
-  error: string;
+  message: string;
   detail?: string;
 }

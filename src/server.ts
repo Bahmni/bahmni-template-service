@@ -1,15 +1,22 @@
+import fs from 'fs';
 import express, { Request, Response } from 'express';
-import { toHtml } from './adapters/htmlAdapter';
-import { runComputeScript } from './computeScriptRunner';
-import { ValidationError } from './errors';
+import { runComputeScript } from './data/scriptRunner';
+import { resolve } from './data/resolver';
+import { AppError } from './errors';
 import logger from './logger';
-import { render } from './renderer';
-import { templateStore } from './templateStore';
-import { RenderRequest, RenderResponse, ErrorResponse } from './types';
+import { render } from './template/renderer';
+import { templateStore } from './template/store';
+import {
+  DataConfig,
+  ResolvedSources,
+  RenderRequest,
+  RenderResponse,
+  ErrorResponse,
+} from './types';
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 interface AuthHeaders {
   cookie?: string;
@@ -29,9 +36,6 @@ app.get('/template-service/api/templates', (_req: Request, res: Response) => {
   const templates = templateStore.list().map((t) => ({
     id: t.id,
     name: t.name,
-    category: t.category,
-    triggers: t.triggers,
-    outputFormats: t.outputFormats,
   }));
   res.json({ templates });
 });
@@ -44,88 +48,73 @@ app.post(
       format = 'html',
       locale = 'en',
       context,
+      data,
     } = req.body as RenderRequest;
 
     if (!templateId) {
       return res
         .status(400)
-        .json({ error: 'templateId is required' } satisfies ErrorResponse);
+        .json({ message: 'templateId is required' } satisfies ErrorResponse);
     }
 
     if (format !== 'html') {
       return res.status(400).json({
-        error: `Invalid format "${format}". Only "html" is supported.`,
+        message: `Invalid format "${format}". Only "html" is supported.`,
       } satisfies ErrorResponse);
     }
 
     const template = templateStore.get(templateId);
     if (!template) {
       return res.status(404).json({
-        error: `Template not found: "${templateId}"`,
-      } satisfies ErrorResponse);
-    }
-
-    if (!template.outputFormats.includes(format)) {
-      return res.status(400).json({
-        error: `Template "${templateId}" does not support format "${format}"`,
+        message: `Template not found: "${templateId}"`,
       } satisfies ErrorResponse);
     }
 
     try {
       logger.info(
-        { templateId, hasComputeScript: !!template.computeScriptPath },
+        {
+          templateId,
+          hasDataConfig: !!template.dataConfigPath,
+          hasComputeScript: !!template.computeScriptPath,
+        },
         'Render',
       );
 
       const auth = buildAuthHeaders(req);
 
-      const compute = template.computeScriptPath
-        ? await runComputeScript(template.computeScriptPath, context, auth)
+      let resolvedSources: ResolvedSources = {};
+
+      if (template.dataConfigPath) {
+        const dataConfig = JSON.parse(
+          fs.readFileSync(template.dataConfigPath, 'utf-8'),
+        ) as DataConfig;
+        resolvedSources = await resolve(dataConfig, context, auth);
+      }
+
+      const computed = template.computeScriptPath
+        ? await runComputeScript(template.computeScriptPath, context, resolvedSources, data, locale)
         : {};
 
       const html = await render(
         template.templatePath,
-        compute,
+        computed,
         locale,
-        template.config,
+        template.stylesheetPath,
+        resolvedSources,
+        data,
       );
 
-      return res.json({ html: toHtml(html) } satisfies RenderResponse);
+      return res.json({ html } satisfies RenderResponse);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
 
       logger.error({ templateId, message }, 'Render failed');
 
-      if (message.includes('Invalid format')) {
-        return res.status(400).json({ error: message } satisfies ErrorResponse);
+      if (err instanceof AppError) {
+        return res.status(err.statusCode).json({ message } satisfies ErrorResponse);
       }
 
-      if (
-        message.includes('OpenMRS API unreachable') ||
-        message.includes('ECONNREFUSED') ||
-        message.includes('OpenMRS API timeout')
-      ) {
-        return res
-          .status(502)
-          .json({ error: 'OpenMRS API unreachable' } satisfies ErrorResponse);
-      }
-
-      if (message.includes('session expired')) {
-        return res.status(401).json({ error: message } satisfies ErrorResponse);
-      }
-
-      if (message.includes('OpenMRS resource not found')) {
-        return res.status(404).json({ error: message } satisfies ErrorResponse);
-      }
-
-      if (err instanceof ValidationError) {
-        return res.status(400).json({ error: message } satisfies ErrorResponse);
-      }
-
-      return res.status(500).json({
-        error: 'Render failed',
-        detail: message,
-      } satisfies ErrorResponse);
+      return res.status(500).json({ message: 'Render failed', detail: message } satisfies ErrorResponse);
     }
   },
 );

@@ -43,5 +43,16 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.59.2"
-  }
+  },
+  "license": "MPL-2.0",
+  "licenses": [
+    {
+      "type": "MPL-2.0",
+      "url": "https://www.bahmni.org/license/mplv2hd"
+    },
+    {
+      "type": "Healthcare Disclaimer",
+      "url": "https://www.bahmni.org/license"
+    }
+  ]
 }

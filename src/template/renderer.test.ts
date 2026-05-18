@@ -66,11 +66,7 @@ describe('renderer', () => {
         'demo/template.html': `{{ computed.value | barcode('not-a-real-bcid', 40) }}`,
       });
       try {
-        const html = await render(
-          'demo/template.html',
-          { value: 'X' },
-          'en',
-        );
+        const html = await render('demo/template.html', { value: 'X' }, 'en');
         expect(html).toContain('<span class="barcode-fallback">X</span>');
       } finally {
         t.cleanup();

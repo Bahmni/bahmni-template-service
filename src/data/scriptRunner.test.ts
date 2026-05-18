@@ -1,9 +1,9 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { runComputeScript } from './scriptRunner';
 import { AppError, ValidationError } from '../errors';
 import { _resetTranslationCacheForTests } from '../template/renderer';
+import { runComputeScript } from './scriptRunner';
 
 function setupEnv(): { dir: string; cleanup: () => void } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'script-'));
@@ -30,10 +30,17 @@ describe('runComputeScript', () => {
   it('returns the object from compute()', async () => {
     const env = setupEnv();
     try {
-      const scriptPath = writeScript(env.dir, 'ok.js', `
+      const scriptPath = writeScript(
+        env.dir,
+        'ok.js',
+        `
         module.exports = { compute: async () => ({ name: 'Alice', age: 30 }) };
-      `);
-      expect(await runComputeScript(scriptPath, {})).toEqual({ name: 'Alice', age: 30 });
+      `,
+      );
+      expect(await runComputeScript(scriptPath, {})).toEqual({
+        name: 'Alice',
+        age: 30,
+      });
     } finally {
       env.cleanup();
     }
@@ -43,9 +50,13 @@ describe('runComputeScript', () => {
     // Jest's IDs differ from require.cache keys so hot-reload cannot be exercised here.
     const env = setupEnv();
     try {
-      const scriptPath = writeScript(env.dir, 'multi.js', `
+      const scriptPath = writeScript(
+        env.dir,
+        'multi.js',
+        `
         module.exports = { compute: async () => ({ ok: true }) };
-      `);
+      `,
+      );
       for (let i = 0; i < 3; i++) {
         expect(await runComputeScript(scriptPath, {})).toEqual({ ok: true });
       }
@@ -57,13 +68,21 @@ describe('runComputeScript', () => {
   it('re-throws ValidationError from compute()', async () => {
     const env = setupEnv();
     try {
-      const scriptPath = writeScript(env.dir, 'validate.js', `
+      const scriptPath = writeScript(
+        env.dir,
+        'validate.js',
+        `
         module.exports = {
           compute: ({ ValidationError }) => { throw new ValidationError('bad input'); }
         };
-      `);
-      await expect(runComputeScript(scriptPath, {})).rejects.toBeInstanceOf(ValidationError);
-      await expect(runComputeScript(scriptPath, {})).rejects.toThrow('bad input');
+      `,
+      );
+      await expect(runComputeScript(scriptPath, {})).rejects.toBeInstanceOf(
+        ValidationError,
+      );
+      await expect(runComputeScript(scriptPath, {})).rejects.toThrow(
+        'bad input',
+      );
     } finally {
       env.cleanup();
     }
@@ -72,9 +91,13 @@ describe('runComputeScript', () => {
   it('throws AppError(500) when compute() throws a non-ValidationError', async () => {
     const env = setupEnv();
     try {
-      const scriptPath = writeScript(env.dir, 'crash.js', `
+      const scriptPath = writeScript(
+        env.dir,
+        'crash.js',
+        `
         module.exports = { compute: () => { throw new TypeError('oops'); } };
-      `);
+      `,
+      );
       const err = await runComputeScript(scriptPath, {}).catch((e) => e);
       expect(err).toBeInstanceOf(AppError);
       expect((err as AppError).statusCode).toBe(500);
@@ -86,7 +109,11 @@ describe('runComputeScript', () => {
   it('returns {} when compute is not exported', async () => {
     const env = setupEnv();
     try {
-      const scriptPath = writeScript(env.dir, 'noexport.js', `module.exports = {};`);
+      const scriptPath = writeScript(
+        env.dir,
+        'noexport.js',
+        `module.exports = {};`,
+      );
       expect(await runComputeScript(scriptPath, {})).toEqual({});
     } finally {
       env.cleanup();
@@ -96,9 +123,13 @@ describe('runComputeScript', () => {
   it('returns {} when compute() returns null', async () => {
     const env = setupEnv();
     try {
-      const scriptPath = writeScript(env.dir, 'null.js', `
+      const scriptPath = writeScript(
+        env.dir,
+        'null.js',
+        `
         module.exports = { compute: () => null };
-      `);
+      `,
+      );
       expect(await runComputeScript(scriptPath, {})).toEqual({});
     } finally {
       env.cleanup();
@@ -108,9 +139,13 @@ describe('runComputeScript', () => {
   it('returns {} when compute() returns an array', async () => {
     const env = setupEnv();
     try {
-      const scriptPath = writeScript(env.dir, 'array.js', `
+      const scriptPath = writeScript(
+        env.dir,
+        'array.js',
+        `
         module.exports = { compute: () => ['a', 'b'] };
-      `);
+      `,
+      );
       expect(await runComputeScript(scriptPath, {})).toEqual({});
     } finally {
       env.cleanup();
@@ -126,10 +161,16 @@ describe('runComputeScript', () => {
           path.join(env.dir, '_i18n', 'fr.json'),
           JSON.stringify({ HELLO: 'Bonjour' }),
         );
-        const scriptPath = writeScript(env.dir, 'trans.js', `
+        const scriptPath = writeScript(
+          env.dir,
+          'trans.js',
+          `
           module.exports = { compute: ({ translate }) => ({ label: translate('HELLO') }) };
-        `);
-        expect(await runComputeScript(scriptPath, {}, undefined, undefined, 'fr')).toEqual({
+        `,
+        );
+        expect(
+          await runComputeScript(scriptPath, {}, undefined, undefined, 'fr'),
+        ).toEqual({
           label: 'Bonjour',
         });
       } finally {
@@ -145,11 +186,20 @@ describe('runComputeScript', () => {
           path.join(env.dir, '_i18n', 'en.json'),
           JSON.stringify({ HELLO: 'Hello' }),
         );
-        fs.writeFileSync(path.join(env.dir, '_i18n', 'fr.json'), JSON.stringify({}));
-        const scriptPath = writeScript(env.dir, 'fallback.js', `
+        fs.writeFileSync(
+          path.join(env.dir, '_i18n', 'fr.json'),
+          JSON.stringify({}),
+        );
+        const scriptPath = writeScript(
+          env.dir,
+          'fallback.js',
+          `
           module.exports = { compute: ({ translate }) => ({ label: translate('HELLO') }) };
-        `);
-        expect(await runComputeScript(scriptPath, {}, undefined, undefined, 'fr')).toEqual({
+        `,
+        );
+        expect(
+          await runComputeScript(scriptPath, {}, undefined, undefined, 'fr'),
+        ).toEqual({
           label: 'Hello',
         });
       } finally {
@@ -160,10 +210,16 @@ describe('runComputeScript', () => {
     it('falls back to raw key when missing in all locales', async () => {
       const env = setupEnv();
       try {
-        const scriptPath = writeScript(env.dir, 'rawkey.js', `
+        const scriptPath = writeScript(
+          env.dir,
+          'rawkey.js',
+          `
           module.exports = { compute: ({ translate }) => ({ label: translate('MISSING') }) };
-        `);
-        expect(await runComputeScript(scriptPath, {})).toEqual({ label: 'MISSING' });
+        `,
+        );
+        expect(await runComputeScript(scriptPath, {})).toEqual({
+          label: 'MISSING',
+        });
       } finally {
         env.cleanup();
       }
@@ -181,15 +237,25 @@ describe('runComputeScript', () => {
           path.join(env.dir, '_i18n', 'fr.json'),
           JSON.stringify({ HELLO: 'Bonjour' }),
         );
-        const scriptPath = writeScript(env.dir, 'override.js', `
+        const scriptPath = writeScript(
+          env.dir,
+          'override.js',
+          `
           module.exports = {
             compute: ({ translate }) => ({
               en: translate('HELLO', 'en'),
               fr: translate('HELLO', 'fr'),
             })
           };
-        `);
-        const result = await runComputeScript(scriptPath, {}, undefined, undefined, 'en');
+        `,
+        );
+        const result = await runComputeScript(
+          scriptPath,
+          {},
+          undefined,
+          undefined,
+          'en',
+        );
         expect(result).toEqual({ en: 'Hello', fr: 'Bonjour' });
       } finally {
         env.cleanup();

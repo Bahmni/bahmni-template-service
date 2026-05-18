@@ -53,7 +53,10 @@ class TemplateStore {
     const root = path.resolve(templatesDir());
     const templateDir = path.resolve(root, entry.folder);
     if (!templateDir.startsWith(root + path.sep)) {
-      logger.error({ templateId, folder: entry.folder }, 'Invalid template folder');
+      logger.error(
+        { templateId, folder: entry.folder },
+        'Invalid template folder',
+      );
       return null;
     }
 
@@ -72,7 +75,9 @@ class TemplateStore {
       id: entry.id,
       name: entry.name,
       templatePath,
-      dataConfigPath: fs.existsSync(dataConfigPath) ? dataConfigPath : undefined,
+      dataConfigPath: fs.existsSync(dataConfigPath)
+        ? dataConfigPath
+        : undefined,
       computeScriptPath: fs.existsSync(computeScriptPath)
         ? computeScriptPath
         : undefined,

@@ -1,6 +1,11 @@
 import axios from 'axios';
+import {
+  BadGatewayError,
+  NotFoundError,
+  UnauthorizedError,
+  ValidationError,
+} from '../errors';
 import { resolve } from './resolver';
-import { BadGatewayError, NotFoundError, UnauthorizedError, ValidationError } from '../errors';
 
 jest.mock('axios');
 const mockedAxios = jest.mocked(axios);
@@ -37,7 +42,10 @@ describe('resolver', () => {
 
   describe('URL construction', () => {
     it('builds a FHIR URL with context substitution and params', async () => {
-      mockedAxios.get.mockResolvedValue({ status: 200, data: { resourceType: 'Patient' } });
+      mockedAxios.get.mockResolvedValue({
+        status: 200,
+        data: { resourceType: 'Patient' },
+      });
       await resolve(
         {
           sources: {
@@ -86,7 +94,10 @@ describe('resolver', () => {
               api: 'fhir',
               resource: 'MedicationRequest',
               params: {
-                _include: ['MedicationRequest:encounter', 'MedicationRequest:medication'],
+                _include: [
+                  'MedicationRequest:encounter',
+                  'MedicationRequest:medication',
+                ],
               },
             },
           },
@@ -104,7 +115,11 @@ describe('resolver', () => {
         resolve(
           {
             sources: {
-              patient: { api: 'fhir', resource: 'Patient', params: { _id: '{{patientUuid}}' } },
+              patient: {
+                api: 'fhir',
+                resource: 'Patient',
+                params: { _id: '{{patientUuid}}' },
+              },
             },
           },
           {},
@@ -118,14 +133,18 @@ describe('resolver', () => {
     it('sets Authorization header when provided', async () => {
       mockedAxios.get.mockResolvedValue({ status: 200, data: {} });
       await resolve(
-        { sources: { s: { api: 'rest', resource: '/openmrs/ws/rest/v1/foo' } } },
+        {
+          sources: { s: { api: 'rest', resource: '/openmrs/ws/rest/v1/foo' } },
+        },
         {},
         { authorization: 'Basic dXNlcjpwYXNz' },
       );
       expect(mockedAxios.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: expect.objectContaining({ Authorization: 'Basic dXNlcjpwYXNz' }),
+          headers: expect.objectContaining({
+            Authorization: 'Basic dXNlcjpwYXNz',
+          }),
         }),
       );
     });
@@ -133,7 +152,9 @@ describe('resolver', () => {
     it('sets Cookie as JSESSIONID when sessionId is provided', async () => {
       mockedAxios.get.mockResolvedValue({ status: 200, data: {} });
       await resolve(
-        { sources: { s: { api: 'rest', resource: '/openmrs/ws/rest/v1/foo' } } },
+        {
+          sources: { s: { api: 'rest', resource: '/openmrs/ws/rest/v1/foo' } },
+        },
         {},
         { sessionId: 'sess-abc' },
       );
@@ -148,14 +169,18 @@ describe('resolver', () => {
     it('forwards raw cookie when only cookie is provided', async () => {
       mockedAxios.get.mockResolvedValue({ status: 200, data: {} });
       await resolve(
-        { sources: { s: { api: 'rest', resource: '/openmrs/ws/rest/v1/foo' } } },
+        {
+          sources: { s: { api: 'rest', resource: '/openmrs/ws/rest/v1/foo' } },
+        },
         {},
         { cookie: 'JSESSIONID=raw-value; other=x' },
       );
       expect(mockedAxios.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: expect.objectContaining({ Cookie: 'JSESSIONID=raw-value; other=x' }),
+          headers: expect.objectContaining({
+            Cookie: 'JSESSIONID=raw-value; other=x',
+          }),
         }),
       );
     });
@@ -163,14 +188,18 @@ describe('resolver', () => {
     it('prefers sessionId cookie over raw cookie when both are present', async () => {
       mockedAxios.get.mockResolvedValue({ status: 200, data: {} });
       await resolve(
-        { sources: { s: { api: 'rest', resource: '/openmrs/ws/rest/v1/foo' } } },
+        {
+          sources: { s: { api: 'rest', resource: '/openmrs/ws/rest/v1/foo' } },
+        },
         {},
         { sessionId: 'sess-priority', cookie: 'JSESSIONID=raw-value' },
       );
       expect(mockedAxios.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: expect.objectContaining({ Cookie: 'JSESSIONID=sess-priority' }),
+          headers: expect.objectContaining({
+            Cookie: 'JSESSIONID=sess-priority',
+          }),
         }),
       );
     });
@@ -191,7 +220,9 @@ describe('resolver', () => {
         {},
         {},
       );
-      expect(result).toEqual({ patient: { resourceType: 'Bundle', entry: [] } });
+      expect(result).toEqual({
+        patient: { resourceType: 'Bundle', entry: [] },
+      });
     });
 
     it('throws NotFoundError on 404', async () => {
@@ -245,23 +276,23 @@ describe('resolver', () => {
   });
 
   describe('parallel fetch', () => {
-  it('fetches multiple sources in parallel and returns all results', async () => {
-    mockedAxios.get
-      .mockResolvedValueOnce({ status: 200, data: { id: 'p1' } })
-      .mockResolvedValueOnce({ status: 200, data: { id: 'e1' } });
-    const result = await resolve(
-      {
-        sources: {
-          patient: { api: 'fhir', resource: 'Patient' },
-          encounter: { api: 'fhir', resource: 'Encounter' },
+    it('fetches multiple sources in parallel and returns all results', async () => {
+      mockedAxios.get
+        .mockResolvedValueOnce({ status: 200, data: { id: 'p1' } })
+        .mockResolvedValueOnce({ status: 200, data: { id: 'e1' } });
+      const result = await resolve(
+        {
+          sources: {
+            patient: { api: 'fhir', resource: 'Patient' },
+            encounter: { api: 'fhir', resource: 'Encounter' },
+          },
         },
-      },
-      {},
-      {},
-    );
-    expect(result.patient).toEqual({ id: 'p1' });
-    expect(result.encounter).toEqual({ id: 'e1' });
-    expect(mockedAxios.get).toHaveBeenCalledTimes(2);
-  });
+        {},
+        {},
+      );
+      expect(result.patient).toEqual({ id: 'p1' });
+      expect(result.encounter).toEqual({ id: 'e1' });
+      expect(mockedAxios.get).toHaveBeenCalledTimes(2);
+    });
   });
 });

@@ -22,7 +22,8 @@ export async function runComputeScript(
   locale = 'en',
 ): Promise<Record<string, unknown>> {
   const translations = loadTranslations(locale);
-  const englishFallback = locale === 'en' ? translations : loadTranslations('en');
+  const englishFallback =
+    locale === 'en' ? translations : loadTranslations('en');
   const translate: TranslateFn = (key, overrideLocale) => {
     const t = overrideLocale ? loadTranslations(overrideLocale) : translations;
     return t[key] ?? englishFallback[key] ?? key;
@@ -49,7 +50,15 @@ export async function runComputeScript(
     }
 
     const result = await Promise.resolve(
-      mod.compute({ context, resolved, data, ValidationError, fhirPath: evaluateFhirPath, translate, locale }),
+      mod.compute({
+        context,
+        resolved,
+        data,
+        ValidationError,
+        fhirPath: evaluateFhirPath,
+        translate,
+        locale,
+      }),
     );
 
     if (result == null || typeof result !== 'object' || Array.isArray(result)) {

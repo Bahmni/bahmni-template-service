@@ -10,8 +10,8 @@
 import fs from 'fs';
 import http from 'http';
 import express, { Request, Response } from 'express';
-import { runComputeScript } from './data/scriptRunner';
 import { resolve } from './data/resolver';
+import { runComputeScript } from './data/scriptRunner';
 import { AppError } from './errors';
 import logger from './logger';
 import { render } from './template/renderer';
@@ -108,7 +108,13 @@ app.post(
       }
 
       const computed = template.computeScriptPath
-        ? await runComputeScript(template.computeScriptPath, context, resolvedSources, data, locale)
+        ? await runComputeScript(
+            template.computeScriptPath,
+            context,
+            resolvedSources,
+            data,
+            locale,
+          )
         : {};
 
       const html = await render(
@@ -127,10 +133,15 @@ app.post(
       logger.error({ templateId, message }, 'Render failed');
 
       if (err instanceof AppError) {
-        return res.status(err.statusCode).json({ message } satisfies ErrorResponse);
+        return res
+          .status(err.statusCode)
+          .json({ message } satisfies ErrorResponse);
       }
 
-      return res.status(500).json({ message: 'Render failed', detail: message } satisfies ErrorResponse);
+      return res.status(500).json({
+        message: 'Render failed',
+        detail: message,
+      } satisfies ErrorResponse);
     }
   },
 );

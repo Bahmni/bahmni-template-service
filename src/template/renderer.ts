@@ -23,7 +23,11 @@ type BarcodeCallback = (
 const translationCache = new Map<string, TranslationCacheEntry>();
 
 function htmlEscape(value: string): string {
-  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 export function loadTranslations(locale: string): Record<string, string> {
@@ -168,8 +172,12 @@ function createEnvironment(locale: string): nunjucks.Environment {
     const birth = new Date(birthDate);
     if (isNaN(birth.getTime())) return '';
     const now = new Date();
-    const days = Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
-    const monthsRaw = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+    const days = Math.floor(
+      (now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    const monthsRaw =
+      (now.getFullYear() - birth.getFullYear()) * 12 +
+      (now.getMonth() - birth.getMonth());
     const months = monthsRaw - (now.getDate() >= birth.getDate() ? 0 : 1);
     const years = Math.floor(months / 12);
     if (days < 30) return `${days} day${days !== 1 ? 's' : ''}`;

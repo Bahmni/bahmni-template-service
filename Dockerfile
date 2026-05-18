@@ -12,7 +12,7 @@ COPY dist/ ./dist/
 
 ENV NODE_ENV=production
 ENV PORT=8080
-ENV TEMPLATES_DIR=/etc/bahmni_config/apps/clinical/print-templates
+ENV TEMPLATES_DIR=/etc/bahmni_config/print-templates
 
 EXPOSE 8080
 

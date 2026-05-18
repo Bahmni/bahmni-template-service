@@ -33,9 +33,9 @@ nginx  ──── proxy_pass ────►  template-service:8080  (this ser
                           /etc/bahmni_config/print-templates/
                           (Docker bind-mount from standard-config)
                                       │
-                          compute.js fetches patient data from
-                          OpenMRS FHIR/REST APIs
-                          (JSESSIONID forwarded from browser)
+                          resolver.ts fetches declared FHIR/REST sources
+                          from OpenMRS (JSESSIONID forwarded from browser)
+                          compute.js transforms pre-fetched data into fields
                                       │
                           returns rendered HTML string
                                       │
@@ -53,15 +53,17 @@ bahmni-template-service/
 ├── src/
 │   ├── server.ts               Express app — routes, auth, error mapping
 │   ├── types.ts                All TypeScript interfaces (single source of truth)
-│   ├── templateStore.ts        Reads templates.json (mtime-cached)
-│   ├── computeScriptRunner.ts  Runs compute.js with a pre-authenticated OpenMRS client
-│   ├── renderer.ts             Nunjucks environment, custom filters, async render()
-│   └── builtins/
-│       ├── fhirPath.ts         FHIRPath evaluation (used by | fhirpathEvaluate filter)
-│       └── clinical.ts         age, bmi, los helpers (used by | age filter)
+│   ├── errors.ts               AppError hierarchy (ValidationError, NotFoundError, …)
+│   ├── template/
+│   │   ├── store.ts            Reads templates.json (mtime-cached)
+│   │   ├── renderer.ts         Nunjucks environment, custom filters, async render()
+│   │   └── fhirPath.ts         FHIRPath evaluation (used by | fhirpathEvaluate filter)
+│   └── data/
+│       ├── resolver.ts         Fetches FHIR/REST sources declared in data-config.json
+│       └── scriptRunner.ts     Runs compute.js with pre-fetched resolved sources
 ├── .env.example                Copy to .env for local dev
 ├── Dockerfile
-└── ARCHITECTURE.md
+└── docs/USAGE_GUIDE.md
 ```
 
 ---
@@ -83,17 +85,19 @@ bahmni-template-service/
 3. templateStore reads templates.json → finds REG_CARD_V1 → checks template.html exists.
    templates.json is mtime-cached; disk is only re-read when the file changes.
 
-4. If compute.js exists in the template folder, computeScriptRunner runs it.
-   compute.js receives { context, openmrs } — a pre-authenticated OpenMRS client.
-   It fetches whatever FHIR/REST data it needs and returns a plain object.
-   Each OpenMRS call is bounded by OPENMRS_TIMEOUT_MS (default 10 s).
+4. If data-config.json exists, resolver.ts fetches the declared REST/FHIR sources from
+   OpenMRS using the forwarded session headers. Each call is bounded by OPENMRS_TIMEOUT_MS.
 
-5. renderer.ts renders template.html with Nunjucks, passing:
-     { compute, config, locale, now }
+5. If compute.js exists, scriptRunner.ts runs it.
+   compute.js receives { context, resolved, data, ValidationError, fhirPath, translate, locale }.
+   It transforms the pre-fetched resolved sources into a plain object returned to the template.
+
+6. renderer.ts renders template.html with Nunjucks, passing:
+     { computed, data, locale, now, ...<sourceNames> }
    Custom filters (| t, | barcode, | qrcode, | dateFormat, | age, | round, …) run inline.
    render() is async because the | barcode filter uses bwip-js zlib streams.
 
-6. server.ts sends the HTML response.
+7. server.ts sends the HTML response.
    The browser handles the print dialog.
 ```
 
@@ -111,10 +115,7 @@ Returns all registered templates. The Bahmni UI calls this on load to decide whi
   "templates": [
     {
       "id": "REG_CARD_V1",
-      "name": "Registration Card",
-      "category": "patientRegistration",
-      "triggers": [{ "label": "Print Card (English)", "shortcutKey": "p" }],
-      "outputFormats": ["html"]
+      "name": "Registration Card"
     }
   ]
 }
@@ -134,6 +135,9 @@ Runs `compute.js` and renders the template.
   "locale": "en",
   "context": {
     "patientUuid": "62d4400b-7bb9-4a0a-a2a5-620b080ee266"
+  },
+  "data": {
+    "printedBy": "Dr. Smith"
   }
 }
 ```
@@ -143,18 +147,19 @@ Runs `compute.js` and renders the template.
 | `templateId` | Yes | — | Must match an `id` in `templates.json` |
 | `format` | No | `"html"` | Only `"html"` is supported |
 | `locale` | No | `"en"` | BCP 47 language tag (e.g. `"fr"`, `"hi"`) |
-| `context` | No | `{}` | UUIDs forwarded to `compute.js` (`patientUuid`, `visitUuid`, etc.) |
+| `context` | No | `{}` | UUIDs forwarded to `data-config.json` placeholders and `compute.js` |
+| `data` | No | `{}` | Free-form object available as `{{ data.* }}` in templates and `data` in `compute.js` |
 
 **Responses**
 
 | Status | Body | Cause |
 |---|---|---|
-| `200` | HTML string | Success |
-| `400` | `{ "error": "..." }` | Missing `templateId` or invalid `format` |
-| `404` | `{ "error": "Template not found: ..." }` | `templateId` not in `templates.json` |
-| `401` | `{ "error": "OpenMRS session expired..." }` | Session cookie invalid or expired |
-| `502` | `{ "error": "OpenMRS API unreachable..." }` | OpenMRS timeout or network error |
-| `500` | `{ "error": "..." }` | Unexpected render error |
+| `200` | `{ "html": "..." }` | Success |
+| `400` | `{ "message": "..." }` | Missing `templateId`, invalid `format`, or invalid `locale` |
+| `404` | `{ "message": "Template not found: ..." }` | `templateId` not in `templates.json` |
+| `401` | `{ "message": "OpenMRS session expired..." }` | Session cookie invalid or expired |
+| `502` | `{ "message": "OpenMRS API unreachable..." }` | OpenMRS timeout or network error |
+| `500` | `{ "message": "..." }` | Unexpected render error |
 
 ---
 
@@ -166,7 +171,7 @@ Docker health check. Returns `{ "status": "ok", "timestamp": "..." }`.
 
 ## 5. Authentication
 
-The service forwards the browser's session to OpenMRS on every API call inside `compute.js`. No credentials are stored in the service.
+The service forwards the browser's session to OpenMRS on every API call made by `data-config.json` sources. No credentials are stored in the service.
 
 | Header | Description |
 |---|---|
@@ -187,8 +192,8 @@ Copy `.env.example` to `.env` for local development.
 | `PORT` | `8080` | Port the service listens on |
 | `OPENMRS_URL` | `http://openmrs:8080` | OpenMRS base URL (Docker service name in prod) |
 | `TEMPLATES_DIR` | `/etc/bahmni_config/print-templates` | Absolute path to the templates directory |
-| `OPENMRS_TIMEOUT_MS` | `10000` | Per-request timeout for OpenMRS calls in `compute.js` (ms) |
-| `LOG_LEVEL` | — | Set to `debug` to log session header presence per request |
+| `OPENMRS_TIMEOUT_MS` | `10000` | Per-request timeout for OpenMRS calls made by `data-config.json` sources (ms) |
+| `LOG_LEVEL` | `info` | Log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) |
 
 ---
 
@@ -241,7 +246,7 @@ All template files live in `standard-config`. No TypeScript changes needed.
 print-templates/
 └── discharge-summary/
     ├── template.html     ← required
-    └── compute.js        ← fetches and transforms data from OpenMRS
+    └── compute.js        ← transforms pre-fetched resolved sources
 ```
 
 **Step 2 — Register in `templates.json`:**
@@ -249,22 +254,13 @@ print-templates/
 {
   "id": "DISCHARGE_V1",
   "name": "Discharge Summary",
-  "folder": "discharge-summary",
-  "category": "discharge",
-  "outputFormats": ["html"],
-  "triggers": [
-    { "label": "Print Discharge Summary", "shortcutKey": "d" }
-  ],
-  "config": {
-    "facilityName": "City Health Centre"
-  }
+  "folder": "discharge-summary"
 }
 ```
 
-**Step 3 — Write `compute.js`** to fetch patient data from OpenMRS and return it as a plain object.
+**Step 3 — Write `compute.js`** to transform pre-fetched resolved sources and return a plain object.
 
-**Step 4 — Write `template.html`** using `{{ compute.* }}`, `{{ config.* }}`, and the built-in Nunjucks filters.
+**Step 4 — Write `template.html`** using `{{ computed.* }}`, `{{ data.* }}`, and the built-in Nunjucks filters.
 
 Template edits are live — no service restart needed.
 
-See the **[Template Authoring Guide](../standard-config/print-templates/TEMPLATE_AUTHORING_GUIDE.md)** for the full reference.

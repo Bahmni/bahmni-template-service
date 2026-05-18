@@ -22,6 +22,10 @@ type BarcodeCallback = (
 
 const translationCache = new Map<string, TranslationCacheEntry>();
 
+function htmlEscape(value: string): string {
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 export function loadTranslations(locale: string): Record<string, string> {
   const filePath = path.join(templatesDir(), '_i18n', `${locale}.json`);
   try {
@@ -84,8 +88,9 @@ function createEnvironment(locale: string): nunjucks.Environment {
         return;
       }
 
+      const escapedValue = htmlEscape(value);
       const fallback = new nunjucks.runtime.SafeString(
-        `<span class="barcode-fallback">${value}</span>`,
+        `<span class="barcode-fallback">${escapedValue}</span>`,
       );
 
       try {
@@ -107,7 +112,7 @@ function createEnvironment(locale: string): nunjucks.Environment {
             callback(
               null,
               new nunjucks.runtime.SafeString(
-                `<img src="data:image/png;base64,${base64}" alt="${value}" style="display:block;" />`,
+                `<img src="data:image/png;base64,${base64}" alt="${escapedValue}" style="display:block;" />`,
               ),
             );
           },
@@ -138,7 +143,7 @@ function createEnvironment(locale: string): nunjucks.Environment {
       } catch (err) {
         logger.error({ err }, 'QR code generation failed');
         return new nunjucks.runtime.SafeString(
-          `<span class="qrcode-fallback">${value}</span>`,
+          `<span class="qrcode-fallback">${htmlEscape(value)}</span>`,
         );
       }
     },
@@ -163,9 +168,10 @@ function createEnvironment(locale: string): nunjucks.Environment {
     const birth = new Date(birthDate);
     if (isNaN(birth.getTime())) return '';
     const now = new Date();
-    const years = now.getFullYear() - birth.getFullYear();
-    const months = years * 12 + (now.getMonth() - birth.getMonth());
     const days = Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24));
+    const monthsRaw = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+    const months = monthsRaw - (now.getDate() >= birth.getDate() ? 0 : 1);
+    const years = Math.floor(months / 12);
     if (days < 30) return `${days} day${days !== 1 ? 's' : ''}`;
     if (months < 24) return `${months} month${months !== 1 ? 's' : ''}`;
     return `${years} year${years !== 1 ? 's' : ''}`;

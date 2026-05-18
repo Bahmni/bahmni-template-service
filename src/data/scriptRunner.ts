@@ -1,4 +1,4 @@
-import { ValidationError } from '../errors';
+import { AppError, ValidationError } from '../errors';
 import logger from '../logger';
 import { evaluateFhirPath } from '../template/fhirPath';
 import { loadTranslations } from '../template/renderer';
@@ -56,6 +56,6 @@ export async function runComputeScript(
   } catch (err) {
     if (err instanceof ValidationError) throw err;
     logger.error({ scriptPath, err }, 'Error running compute script');
-    return {};
+    throw new AppError('Compute script failed', 500);
   }
 }

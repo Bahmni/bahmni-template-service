@@ -80,6 +80,9 @@ async function fetchSources(
             }
             throw new BadGatewayError(`OpenMRS API unreachable when fetching source: ${sourceName}`);
           }
+          throw new BadGatewayError(
+            `Unexpected status ${status} from OpenMRS for source: ${sourceName}`,
+          );
         }
         throw err;
       }

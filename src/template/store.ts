@@ -50,7 +50,12 @@ class TemplateStore {
       return null;
     }
 
-    const templateDir = path.join(templatesDir(), entry.folder);
+    const root = path.resolve(templatesDir());
+    const templateDir = path.resolve(root, entry.folder);
+    if (!templateDir.startsWith(root + path.sep)) {
+      logger.error({ templateId, folder: entry.folder }, 'Invalid template folder');
+      return null;
+    }
 
     const templateHtmlPath = path.join(templateDir, 'template.html');
     if (!fs.existsSync(templateHtmlPath)) {

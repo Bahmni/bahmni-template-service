@@ -1,4 +1,5 @@
 import fs from 'fs';
+import http from 'http';
 import express, { Request, Response } from 'express';
 import { runComputeScript } from './data/scriptRunner';
 import { resolve } from './data/resolver';
@@ -60,6 +61,12 @@ app.post(
     if (format !== 'html') {
       return res.status(400).json({
         message: `Invalid format "${format}". Only "html" is supported.`,
+      } satisfies ErrorResponse);
+    }
+
+    if (!/^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{2,8})*$/.test(locale)) {
+      return res.status(400).json({
+        message: `Invalid locale "${locale}".`,
       } satisfies ErrorResponse);
     }
 
@@ -125,8 +132,8 @@ app.get('/template-service/health', (_req: Request, res: Response) => {
 
 const PORT = parseInt(process.env.PORT ?? '8080', 10);
 
-async function start(): Promise<void> {
-  app.listen(PORT, () => {
+function start(): http.Server {
+  return app.listen(PORT, () => {
     logger.info(
       {
         port: PORT,
@@ -138,12 +145,14 @@ async function start(): Promise<void> {
   });
 }
 
-process.on('SIGTERM', () => {
-  logger.info('Shutting down');
-  process.exit(0);
-});
-
-start().catch((err) => {
+try {
+  const server = start();
+  process.on('SIGTERM', () => {
+    logger.info('Shutting down');
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10_000).unref();
+  });
+} catch (err) {
   logger.fatal({ err }, 'Fatal startup error');
   process.exit(1);
-});
+}

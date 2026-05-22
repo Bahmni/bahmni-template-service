@@ -16,8 +16,7 @@ const config: Config = {
   testMatch: ['**/*.test.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',
-    '!src/server.ts',          // Express startup — integration-tested, not unit-tested
-    '!src/adapters/pdfAdapter.ts', // Puppeteer — requires real Chromium in CI
+    '!src/server.ts', // Express startup — integration-tested, not unit-tested
   ],
 };
 

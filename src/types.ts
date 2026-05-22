@@ -17,10 +17,6 @@ export interface TemplateRegistry {
   templates: TemplateEntry[];
 }
 
-// ---------------------------------------------------------------------------
-// data-config.json types
-// ---------------------------------------------------------------------------
-
 export interface DataSource {
   api: 'fhir' | 'rest';
   resource: string;
@@ -32,10 +28,6 @@ export interface DataConfig {
 }
 
 export type ResolvedSources = Record<string, unknown>;
-
-// ---------------------------------------------------------------------------
-// Runtime types
-// ---------------------------------------------------------------------------
 
 export interface LoadedTemplate {
   id: string;
@@ -68,4 +60,10 @@ export interface RenderResponse {
 export interface ErrorResponse {
   message: string;
   detail?: string;
+}
+
+export interface AuthHeaders {
+  cookie?: string;
+  sessionId?: string;
+  authorization?: string;
 }

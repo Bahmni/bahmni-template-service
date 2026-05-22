@@ -7,4 +7,14 @@
  * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
  */
 
-declare module 'bwip-js';
+import { Router } from 'express';
+import { HEALTH_PATH, RENDER_PATH, TEMPLATES_PATH } from './constants';
+import { healthCheck, listTemplates, renderTemplate } from './handlers';
+
+const router = Router();
+
+router.get(TEMPLATES_PATH, listTemplates);
+router.post(RENDER_PATH, renderTemplate);
+router.get(HEALTH_PATH, healthCheck);
+
+export default router;

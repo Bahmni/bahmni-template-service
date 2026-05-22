@@ -399,12 +399,12 @@ Generates a barcode as a base64-encoded PNG `<img>` tag. Output is HTML-safe.
 
 Falls back to `<span class="barcode-fallback">value</span>` if generation fails.
 
-### `| qrcode(size)` — QR code
+### `| qrcode(scale)` — QR code
 
-Generates a QR code as an inline SVG. Output is HTML-safe. `size` is width/height in pixels (default: 120).
+Generates a QR code as a base64-encoded PNG `<img>` tag. Output is HTML-safe. `scale` controls the pixel size of each module (default: 3).
 
 ```html
-{{ computed.patientId | qrcode(80) }}
+{{ computed.patientId | qrcode(5) }}
 ```
 
 Falls back to `<span class="qrcode-fallback">value</span>` if generation fails.
@@ -428,7 +428,7 @@ Formats an ISO 8601 date string using the request locale.
 
 ### `| age` — compute age from birthdate
 
-Returns a human-readable age string. Prefer computing age in `compute.js` and returning it directly — use this filter only when you have a raw birthdate available in the template.
+Returns a human-readable age string from an ISO 8601 birth date. Pass the raw `birthDate` from `compute.js` and apply this filter in the template.
 
 ```html
 {{ computed.birthDate | age }}    {# → "33 years" / "4 months" / "14 days" #}
@@ -541,7 +541,6 @@ module.exports = {
       patientId:             officialId?.value ?? '',
       patientName:           patient?.name?.[0]?.text ?? '',
       birthDate:             patient?.birthDate ?? '',
-      age:                   computeAge(patient?.birthDate),
       gender:                patient?.gender ?? '',
       phone:                 patient?.telecom?.find((t) => t.system === 'phone')?.value ?? '',
       address:               patient?.address?.[0]?.text ?? '',
@@ -554,17 +553,6 @@ module.exports = {
     };
   },
 };
-
-function computeAge(birthDate) {
-  if (!birthDate) return '';
-  const birth  = new Date(birthDate);
-  const now    = new Date();
-  const days   = Math.floor((now - birth) / (1000 * 60 * 60 * 24));
-  if (days < 30)   return `${days} days`;
-  const months = Math.floor(days / 30.44);
-  if (months < 12) return `${months} months`;
-  return `${Math.floor(months / 12)} years`;
-}
 ```
 
 ### template.html
@@ -589,7 +577,7 @@ Every value comes from `{{ computed.* }}`.
   </tr>
   <tr>
     <td>{{ 'AGE' | t }} :</td>
-    <td>{{ computed.age | default('') }}</td>
+    <td>{{ computed.birthDate | age }}</td>
   </tr>
   <tr>
     <td>{{ 'GENDER' | t }} :</td>
@@ -687,9 +675,9 @@ module.exports = {
         return {
           drugName:           mr.medicationCodeableConcept?.text ?? '',
           dosageInstructions: buildDosageInstructions(mr.dosageInstruction),
-          startDate:          formatDate(mr.authoredOn ?? ''),
+          startDate:          mr.authoredOn ?? '',
           stopped,
-          stoppedDate:        stopped ? formatDate(mr.dispenseRequest?.validityPeriod?.end ?? '') : '',
+          stoppedDate:        stopped ? mr.dispenseRequest?.validityPeriod?.end ?? '' : '',
           treatmentNotes:     mr.note?.[0]?.text ?? '',
         };
       }),
@@ -698,24 +686,15 @@ module.exports = {
     return {
       patientName: patient?.name?.[0]?.text ?? '',
       patientId:   officialId?.value ?? '',
-      age:         computeAge(patient?.birthDate),
+      birthDate:   patient?.birthDate ?? '',
       gender:      patient?.gender ?? '',
       village:     patient?.address?.[0]?.city ?? '',
       district:    patient?.address?.[0]?.district ?? '',
-      visitDate:   firstStart ? formatDate(firstStart) : '',
+      visitDate:   firstStart ?? '',
       encounters,
     };
   },
 };
-
-function computeAge(birthDate) {
-  if (!birthDate) return '';
-  const days = Math.floor((new Date() - new Date(birthDate)) / (1000 * 60 * 60 * 24));
-  if (days < 30)   return `${days} days`;
-  const months = Math.floor(days / 30.44);
-  if (months < 12) return `${months} months`;
-  return `${Math.floor(months / 12)} years`;
-}
 
 function buildDosageInstructions(dosageInstruction) {
   const d = dosageInstruction?.[0];
@@ -738,14 +717,6 @@ function durationLabel(code) {
   return map[code] ?? code ?? '';
 }
 
-function formatDate(value) {
-  if (!value) return '';
-  try {
-    const date = new Date(value);
-    if (isNaN(date.getTime())) return '';
-    return `${String(date.getDate()).padStart(2, '0')} ${date.toLocaleDateString('en', { month: 'long' })} ${date.getFullYear()}`;
-  } catch { return ''; }
-}
 ```
 
 ### template.html
@@ -758,13 +729,13 @@ function formatDate(value) {
   <table>
     <tr>
       <td>Name: {{ computed.patientName | default('') }}</td>
-      <td>Age: {{ computed.age | default('') }} ({{ computed.gender | capitalize | default('') }})</td>
+      <td>Age: {{ computed.birthDate | age }} ({{ computed.gender | capitalize | default('') }})</td>
       <td>Registration No: {{ computed.patientId | default('') }}</td>
     </tr>
     <tr>
       <td>Village: {{ computed.village | default('') }}</td>
       <td>District: {{ computed.district | default('') }}</td>
-      <td>Visit Date: {{ computed.visitDate | default('') }}</td>
+      <td>Visit Date: {{ computed.visitDate | dateFormat }}</td>
     </tr>
   </table>
 </div>
@@ -785,10 +756,10 @@ function formatDate(value) {
           {{ drug.dosageInstructions | default('—') }}
         </span>
         {% if drug.stopped and drug.stoppedDate %}
-          <span>stopped {{ drug.stoppedDate }}</span>
+          <span>stopped {{ drug.stoppedDate | dateFormat }}</span>
         {% endif %}
       </td>
-      <td>{{ drug.startDate | default('') }}</td>
+      <td>{{ drug.startDate | dateFormat }}</td>
     </tr>
     {% if drug.treatmentNotes %}
     <tr>

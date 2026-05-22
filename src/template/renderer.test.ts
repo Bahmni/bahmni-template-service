@@ -10,7 +10,9 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { render, _resetTranslationCacheForTests } from './renderer';
+
+import { render } from './renderer';
+import { _resetTranslationCacheForTests } from './translations';
 
 function withTempTemplates(files: Record<string, string>): {
   dir: string;
@@ -36,6 +38,52 @@ function withTempTemplates(files: Record<string, string>): {
 }
 
 describe('renderer', () => {
+  describe('stylesheet injection', () => {
+    it('injects <style> block before </head> when the template has a head element', async () => {
+      const t = withTempTemplates({
+        'demo/template.html': '<html><head></head><body>hello</body></html>',
+        'demo/styles.css': 'body { color: red; }',
+      });
+      try {
+        const cssPath = path.join(t.dir, 'demo', 'styles.css');
+        const html = await render('demo/template.html', {}, 'en', cssPath);
+        expect(html).toContain('<style>');
+        expect(html).toContain('body { color: red; }');
+        expect(html.indexOf('<style>')).toBeLessThan(html.indexOf('</head>'));
+      } finally {
+        t.cleanup();
+      }
+    });
+
+    it('prepends <style> block when the template has no </head>', async () => {
+      const t = withTempTemplates({
+        'demo/template.html': '<p>hello</p>',
+        'demo/styles.css': 'p { color: blue; }',
+      });
+      try {
+        const cssPath = path.join(t.dir, 'demo', 'styles.css');
+        const html = await render('demo/template.html', {}, 'en', cssPath);
+        expect(html).toContain('<style>');
+        expect(html).toContain('p { color: blue; }');
+        expect(html).toMatch(/^<style>/);
+      } finally {
+        t.cleanup();
+      }
+    });
+
+    it('skips injection when stylesheetPath is undefined', async () => {
+      const t = withTempTemplates({
+        'demo/template.html': '<html><head></head><body>hello</body></html>',
+      });
+      try {
+        const html = await render('demo/template.html', {}, 'en');
+        expect(html).not.toContain('<style>');
+      } finally {
+        t.cleanup();
+      }
+    });
+  });
+
   describe('barcode filter', () => {
     it('emits a real PNG data URL (regression test for bwip-js v3 Promise bug)', async () => {
       const t = withTempTemplates({

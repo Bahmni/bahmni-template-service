@@ -8,6 +8,8 @@
  */
 
 import axios from 'axios';
+import { FHIR_BASE, OPENMRS_URL, REQUEST_TIMEOUT_MS } from '../config';
+import { AXIOS_TIMEOUT_CODE, HTTP_STATUS } from '../constants';
 import {
   BadGatewayError,
   NotFoundError,
@@ -15,32 +17,8 @@ import {
   ValidationError,
 } from '../errors';
 import logger from '../logger';
-import { DataConfig, DataSource, ResolvedSources } from '../types';
+import { AuthHeaders, DataConfig, DataSource, ResolvedSources } from '../types';
 
-const OPENMRS_URL = process.env.OPENMRS_URL ?? 'http://openmrs:8080';
-const FHIR_BASE = `${OPENMRS_URL}/openmrs/ws/fhir2/R4`;
-const REQUEST_TIMEOUT_MS = parseInt(
-  process.env.OPENMRS_TIMEOUT_MS ?? '10000',
-  10,
-);
-
-function summarizeResponse(body: unknown): string {
-  if (body == null || typeof body !== 'object') return String(body);
-  const obj = body as Record<string, unknown>;
-  const parts: string[] = [];
-  if (typeof obj.resourceType === 'string')
-    parts.push(`resourceType=${obj.resourceType}`);
-  if (Array.isArray(obj.entry)) parts.push(`entry=${obj.entry.length}`);
-  if (Array.isArray(obj.results)) parts.push(`results=${obj.results.length}`);
-  if (typeof obj.id === 'string') parts.push(`id=${obj.id}`);
-  return parts.length > 0 ? `{${parts.join(', ')}}` : `(${typeof body})`;
-}
-
-interface AuthHeaders {
-  cookie?: string;
-  sessionId?: string;
-  authorization?: string;
-}
 
 export async function resolve(
   dataConfig: DataConfig,
@@ -79,23 +57,16 @@ async function fetchSources(
           headers,
           timeout: REQUEST_TIMEOUT_MS,
         });
-        logger.info(
-          {
-            sourceName,
-            status: response.status,
-            body: summarizeResponse(response.data),
-          },
-          'DataResolver: source fetched',
-        );
+        logger.info({ sourceName, status: response.status }, 'DataResolver: source fetched');
         return [sourceName, response.data] as [string, unknown];
       } catch (err) {
         if (axios.isAxiosError(err)) {
           const status = err.response?.status;
-          if (status === 401)
+          if (status === HTTP_STATUS.UNAUTHORIZED)
             throw new UnauthorizedError(
               'OpenMRS session expired. Please log in again.',
             );
-          if (status === 400) {
+          if (status === HTTP_STATUS.BAD_REQUEST) {
             logger.warn(
               { sourceName, url },
               'DataResolver: 400 response — returning empty Bundle',
@@ -105,12 +76,12 @@ async function fetchSources(
               unknown,
             ];
           }
-          if (status === 404)
+          if (status === HTTP_STATUS.NOT_FOUND)
             throw new NotFoundError(
               `OpenMRS resource not found for source: ${sourceName}`,
             );
           if (!err.response) {
-            if (err.code === 'ECONNABORTED') {
+            if (err.code === AXIOS_TIMEOUT_CODE) {
               throw new BadGatewayError(
                 `OpenMRS API timeout (>${REQUEST_TIMEOUT_MS}ms) when fetching source: ${sourceName}`,
               );

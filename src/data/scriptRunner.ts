@@ -6,28 +6,21 @@
  * Copyright 2026. Thoughtworks. Thoughtworks is a registered trademark
  * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
  */
+import { DEFAULT_LOCALE } from '../constants';
 import { AppError, ValidationError } from '../errors';
 import logger from '../logger';
 import { evaluateFhirPath } from '../template/fhirPath';
-import { loadTranslations } from '../template/renderer';
+import { createTranslator, TranslateFn } from '../template/translations';
 import { ResolvedSources } from '../types';
-
-type TranslateFn = (key: string, overrideLocale?: string) => string;
 
 export async function runComputeScript(
   scriptPath: string,
   context: Record<string, string> | undefined,
   resolved?: ResolvedSources,
   data?: Record<string, unknown>,
-  locale = 'en',
+  locale = DEFAULT_LOCALE,
 ): Promise<Record<string, unknown>> {
-  const translations = loadTranslations(locale);
-  const englishFallback =
-    locale === 'en' ? translations : loadTranslations('en');
-  const translate: TranslateFn = (key, overrideLocale) => {
-    const t = overrideLocale ? loadTranslations(overrideLocale) : translations;
-    return t[key] ?? englishFallback[key] ?? key;
-  };
+  const translate = createTranslator(locale);
 
   try {
     delete require.cache[require.resolve(scriptPath)];

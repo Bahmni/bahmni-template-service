@@ -19,8 +19,7 @@
     "bwip-js": "^3.3.0",
     "express": "^4.19.2",
     "fhirpath": "^3.13.0",
-    "nunjucks": "^3.2.4",
-    "qrcode-svg": "^1.1.0"
+    "nunjucks": "^3.2.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -44,6 +43,10 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.59.2"
   },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "yarn@1.22.19",
   "license": "MPL-2.0",
   "licenses": [
     {

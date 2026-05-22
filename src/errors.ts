@@ -7,6 +7,8 @@
  * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
  */
 
+import { HTTP_STATUS } from './constants';
+
 export class AppError extends Error {
   constructor(
     message: string,
@@ -14,33 +16,34 @@ export class AppError extends Error {
   ) {
     super(message);
     this.name = 'AppError';
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
 export class ValidationError extends AppError {
   constructor(message: string) {
-    super(message, 400);
+    super(message, HTTP_STATUS.BAD_REQUEST);
     this.name = 'ValidationError';
   }
 }
 
 export class UnauthorizedError extends AppError {
   constructor(message: string) {
-    super(message, 401);
+    super(message, HTTP_STATUS.UNAUTHORIZED);
     this.name = 'UnauthorizedError';
   }
 }
 
 export class NotFoundError extends AppError {
   constructor(message: string) {
-    super(message, 404);
+    super(message, HTTP_STATUS.NOT_FOUND);
     this.name = 'NotFoundError';
   }
 }
 
 export class BadGatewayError extends AppError {
   constructor(message: string) {
-    super(message, 502);
+    super(message, HTTP_STATUS.BAD_GATEWAY);
     this.name = 'BadGatewayError';
   }
 }

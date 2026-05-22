@@ -1,3 +1,12 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at https://www.bahmni.org/license/mplv2hd.
+ *
+ * Copyright 2026. Thoughtworks. Thoughtworks is a registered trademark
+ * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
+ */
+
 import axios from 'axios';
 import {
   BadGatewayError,
@@ -35,6 +44,12 @@ describe('resolver', () => {
   describe('empty sources', () => {
     it('returns {} without calling axios when sources is empty', async () => {
       const result = await resolve({ sources: {} }, {}, {});
+      expect(result).toEqual({});
+      expect(mockedAxios.get).not.toHaveBeenCalled();
+    });
+
+    it('returns {} without calling axios when sources is undefined', async () => {
+      const result = await resolve({}, {}, {});
       expect(result).toEqual({});
       expect(mockedAxios.get).not.toHaveBeenCalled();
     });

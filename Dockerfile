@@ -1,14 +1,17 @@
-FROM node:20-alpine
+FROM node:24-alpine
 
 RUN apk add --no-cache curl
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json yarn.lock tsconfig.json ./
+COPY src/ ./src/
 
-RUN npm ci --omit=dev
-
-COPY dist/ ./dist/
+RUN yarn install --frozen-lockfile && \
+    yarn build && \
+    yarn install --production && \
+    yarn cache clean && \
+    rm -rf src/ tsconfig.json
 
 ENV NODE_ENV=production
 ENV PORT=8080

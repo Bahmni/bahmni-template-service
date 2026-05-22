@@ -1,6 +1,16 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at https://www.bahmni.org/license/mplv2hd.
+ *
+ * Copyright 2026. Thoughtworks. Thoughtworks is a registered trademark
+ * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
+ */
+
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import * as fileSystem from '../fileSystem';
 import { templateStore } from './store';
 
 function setupTemplatesDir(): { dir: string; cleanup: () => void } {
@@ -51,7 +61,7 @@ describe('templateStore', () => {
       const first = templateStore.list();
       expect(first).toHaveLength(1);
 
-      const readSpy = jest.spyOn(fs, 'readFileSync');
+      const readSpy = jest.spyOn(fileSystem, 'readTextFile');
 
       const second = templateStore.list();
       expect(second).toHaveLength(1);
@@ -154,18 +164,40 @@ describe('templateStore', () => {
       fs.writeFileSync(
         path.join(t.dir, 'templates.json'),
         JSON.stringify({
-          templates: [
-            {
-              id: 'A',
-              name: 'A',
-              folder: 'a',
-            },
-          ],
+          templates: [{ id: 'A', name: 'A', folder: 'a' }],
         }),
       );
       fs.mkdirSync(path.join(t.dir, 'a'));
 
       expect(templateStore.get('A')).toBeNull();
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('returns null for a template with a path-traversal folder', () => {
+    const t = setupTemplatesDir();
+    try {
+      fs.writeFileSync(
+        path.join(t.dir, 'templates.json'),
+        JSON.stringify({
+          templates: [{ id: 'ESCAPE', name: 'Escape', folder: '../escape' }],
+        }),
+      );
+      expect(templateStore.get('ESCAPE')).toBeNull();
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('returns [] and logs an error when templates.json contains malformed JSON', () => {
+    const t = setupTemplatesDir();
+    try {
+      fs.writeFileSync(
+        path.join(t.dir, 'templates.json'),
+        '{ not valid json }',
+      );
+      expect(templateStore.list()).toEqual([]);
     } finally {
       t.cleanup();
     }

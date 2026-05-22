@@ -7,4 +7,11 @@
  * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
  */
 
-declare module 'bwip-js';
+export function htmlEscape(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}

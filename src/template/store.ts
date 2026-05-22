@@ -1,11 +1,30 @@
-import fs from 'fs';
-import path from 'path';
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public License,
+ * v. 2.0. If a copy of the MPL was not distributed with this file, You can
+ * obtain one at https://www.bahmni.org/license/mplv2hd.
+ *
+ * Copyright 2026. Thoughtworks. Thoughtworks is a registered trademark
+ * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
+ */
+
+import { templatesDir } from '../config';
+import {
+  COMPUTE_SCRIPT,
+  DATA_CONFIG_FILE,
+  REGISTRY_FILE,
+  STYLESHEET_FILE,
+  TEMPLATE_HTML,
+} from '../constants';
+import {
+  fileExists,
+  joinPath,
+  readJsonFile,
+  resolvePath,
+  safePath,
+  statFile,
+} from '../fileSystem';
 import logger from '../logger';
 import { LoadedTemplate, TemplateEntry, TemplateRegistry } from '../types';
-
-function templatesDir(): string {
-  return process.env.TEMPLATES_DIR ?? '/etc/bahmni_config/print-templates';
-}
 
 interface CacheEntry<T> {
   mtimeMs: number;
@@ -16,22 +35,20 @@ class TemplateStore {
   private registryCache: CacheEntry<TemplateEntry[]> | null = null;
 
   list(): TemplateEntry[] {
-    const registryPath = path.join(templatesDir(), 'templates.json');
+    const registryPath = joinPath(templatesDir(), REGISTRY_FILE);
+
+    const stat = statFile(registryPath);
+    if (!stat) {
+      this.registryCache = null;
+      return [];
+    }
+
+    if (this.registryCache && this.registryCache.mtimeMs === stat.mtimeMs) {
+      return this.registryCache.value;
+    }
+
     try {
-      let stat: fs.Stats;
-      try {
-        stat = fs.statSync(registryPath);
-      } catch {
-        this.registryCache = null;
-        return [];
-      }
-
-      if (this.registryCache && this.registryCache.mtimeMs === stat.mtimeMs) {
-        return this.registryCache.value;
-      }
-
-      const content = fs.readFileSync(registryPath, 'utf-8');
-      const registry = JSON.parse(content) as TemplateRegistry;
+      const registry = readJsonFile<TemplateRegistry>(registryPath);
       const templates = registry.templates ?? [];
       this.registryCache = { mtimeMs: stat.mtimeMs, value: templates };
       return templates;
@@ -50,9 +67,9 @@ class TemplateStore {
       return null;
     }
 
-    const root = path.resolve(templatesDir());
-    const templateDir = path.resolve(root, entry.folder);
-    if (!templateDir.startsWith(root + path.sep)) {
+    const root = resolvePath(templatesDir());
+    const templateDir = safePath(root, entry.folder);
+    if (!templateDir) {
       logger.error(
         { templateId, folder: entry.folder },
         'Invalid template folder',
@@ -60,28 +77,26 @@ class TemplateStore {
       return null;
     }
 
-    const templateHtmlPath = path.join(templateDir, 'template.html');
-    if (!fs.existsSync(templateHtmlPath)) {
+    const templateHtmlPath = joinPath(templateDir, TEMPLATE_HTML);
+    if (!fileExists(templateHtmlPath)) {
       logger.error({ templateId }, 'Missing template.html');
       return null;
     }
 
-    const templatePath = path.join(entry.folder, 'template.html');
-    const dataConfigPath = path.join(templateDir, 'data-config.json');
-    const computeScriptPath = path.join(templateDir, 'compute.js');
-    const cssPath = path.join(templateDir, 'styles.css');
+    const templatePath = joinPath(entry.folder, TEMPLATE_HTML);
+    const dataConfigPath = joinPath(templateDir, DATA_CONFIG_FILE);
+    const computeScriptPath = joinPath(templateDir, COMPUTE_SCRIPT);
+    const cssPath = joinPath(templateDir, STYLESHEET_FILE);
 
     return {
       id: entry.id,
       name: entry.name,
       templatePath,
-      dataConfigPath: fs.existsSync(dataConfigPath)
-        ? dataConfigPath
-        : undefined,
-      computeScriptPath: fs.existsSync(computeScriptPath)
+      dataConfigPath: fileExists(dataConfigPath) ? dataConfigPath : undefined,
+      computeScriptPath: fileExists(computeScriptPath)
         ? computeScriptPath
         : undefined,
-      stylesheetPath: fs.existsSync(cssPath) ? cssPath : undefined,
+      stylesheetPath: fileExists(cssPath) ? cssPath : undefined,
     };
   }
 

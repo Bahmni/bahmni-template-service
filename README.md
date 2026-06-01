@@ -201,7 +201,7 @@ Copy `.env.example` to `.env` for local development.
 
 ```bash
 # 1. Install dependencies
-npm install
+yarn install
 
 # 2. Copy and edit env file
 cp .env.example .env
@@ -209,7 +209,7 @@ cp .env.example .env
 #   TEMPLATES_DIR=/path/to/standard-config/print-templates
 
 # 3. Start in dev mode (auto-restarts on TypeScript changes)
-npm run dev
+yarn dev
 
 # 4. Test a render (use a real JSESSIONID from browser DevTools)
 curl -s -X POST http://localhost:8080/template-service/api/render \
@@ -223,10 +223,10 @@ curl -s -X POST http://localhost:8080/template-service/api/render \
 ## 8. Running tests
 
 ```bash
-npm test                                              # run all tests
-npx jest --testPathPattern=renderer --verbose        # single suite
-npx tsc --noEmit                                     # type-check only
-npm run build                                        # compile to dist/
+yarn test                                             # run all tests
+yarn jest --testPathPattern=renderer --verbose        # single suite
+yarn tsc --noEmit                                     # type-check only
+yarn build                                            # compile to dist/
 ```
 
 | Suite | What it covers |

@@ -830,10 +830,9 @@ curl -s -X POST http://localhost:8080/template-service/api/render \
   }' > /tmp/rendered.html && open /tmp/rendered.html
 ```
 
-Verify barcodes and QR codes are present:
+Verify barcodes and QR codes are present (both produce base64 PNG `<img>` tags):
 ```bash
-grep -c 'data:image/png;base64' /tmp/rendered.html   # barcode count
-grep -c '<svg' /tmp/rendered.html                     # qrcode count
+grep -c 'data:image/png;base64' /tmp/rendered.html   # barcode + qrcode count
 ```
 
 Check the service logs for errors:
@@ -915,7 +914,7 @@ return { items: ['a', 'b'] };
 {{ computed.patientId | barcode('qrcode', 80) }}
 
 <!-- Correct -->
-{{ computed.patientId | qrcode(80) }}             {# QR code (SVG) #}
+{{ computed.patientId | qrcode(80) }}             {# QR code (PNG) #}
 {{ computed.patientId | barcode('code128', 40) }} {# traditional barcode (PNG) #}
 ```
 

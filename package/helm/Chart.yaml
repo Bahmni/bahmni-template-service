@@ -1,0 +1,5 @@
+apiVersion: v2
+name: template-service
+description: Helm chart for template-service
+type: application
+version: 1.0.0

@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+    environment: {{ .Values.metadata.labels.environment }}
+
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+      environment: {{ .Values.metadata.labels.environment }}
+  revisionHistoryLimit: 5
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        environment: {{ .Values.metadata.labels.environment }}
+    spec:
+      {{ if or .Values.global.nodeSelector .Values.nodeSelector }}
+      nodeSelector:
+      {{ if .Values.nodeSelector }}
+      {{ .Values.nodeSelector | toYaml | nindent 8}}
+      {{ else }}
+      {{.Values.global.nodeSelector | toYaml | nindent 8}}
+      {{ end }}
+      {{ end }}
+
+      {{ if or .Values.global.affinity .Values.affinity }}
+      affinity:
+      {{ if .Values.affinity }}
+      {{ .Values.affinity | toYaml | nindent 8}}
+      {{ else }}
+      {{.Values.global.affinity | toYaml | nindent 8}}
+      {{ end }}
+      {{ end }}
+
+      {{ if or .Values.global.tolerations .Values.tolerations }}
+      tolerations:
+      {{ if .Values.tolerations }}
+      {{ .Values.tolerations | toYaml | nindent 8}}
+      {{ else }}
+      {{.Values.global.tolerations | toYaml | nindent 8}}
+      {{ end }}
+      {{ end }}
+
+      {{- if .Values.initContainer.enabled }}
+      initContainers:
+        - name: document-templates
+          image: "{{ .Values.initContainer.image.repository }}/{{ .Values.initContainer.image.name }}:{{ .Values.initContainer.image.tag | default .Chart.AppVersion }}"
+          volumeMounts:
+            - name: bahmni-config
+              mountPath: {{ .Values.initContainer.mountPath }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          resources: 
+            {{- toYaml .Values.resources | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Chart.Name }}-config
+                optional: false
+          volumeMounts:
+            - mountPath: /etc/bahmni-config/print-templates
+              name: bahmni-config
+      volumes:
+        - name: bahmni-config
+          {{- if .Values.initContainer.enabled }}
+          emptyDir: {}
+          {{- else }}
+          persistentVolumeClaim:
+            claimName: bahmni-config-pvc
+          {{- end }}
+      restartPolicy: Always

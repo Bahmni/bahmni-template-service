@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-config
+data:
+  NODE_ENV: "{{ .Values.config.NODE_ENV }}"
+  PORT: "{{ .Values.config.PORT }}"
+  OPENMRS_URL: "{{ .Values.config.OPENMRS_URL }}"
+  TEMPLATES_DIR: "{{ .Values.config.TEMPLATES_DIR }}"
+  TZ: "{{ .Values.global.TZ }}"

@@ -1,30 +1,29 @@
 let browser = null;
-let pagePool = [];
+let activeCount = 0;
+let maxConcurrent = 2;
 let waitQueue = [];
 
-export async function init(maxConcurrent = 2) {
+export async function init(concurrency = 2) {
   const { chromium } = await import('playwright');
+  maxConcurrent = concurrency;
   browser = await chromium.launch({
     args: ['--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage'],
   });
-  for (let i = 0; i < maxConcurrent; i++) {
-    const page = await browser.newPage();
-    pagePool.push(page);
-  }
 }
 
-function acquirePage() {
-  if (pagePool.length > 0) {
-    return Promise.resolve(pagePool.pop());
+function acquireSlot() {
+  if (activeCount < maxConcurrent) {
+    activeCount++;
+    return Promise.resolve();
   }
   return new Promise((resolve) => waitQueue.push(resolve));
 }
 
-function releasePage(page) {
+function releaseSlot() {
   if (waitQueue.length > 0) {
-    waitQueue.shift()(page);
+    waitQueue.shift()();
   } else {
-    pagePool.push(page);
+    activeCount--;
   }
 }
 
@@ -33,8 +32,10 @@ export async function convert(html, pageSettings = {}) {
     throw new Error('PDF pool not initialized. Call init() first.');
   }
 
-  const page = await acquirePage();
+  await acquireSlot();
+  const context = await browser.newContext();
   try {
+    const page = await context.newPage();
     await page.setContent(html, { waitUntil: 'load' });
     const pdfBuffer = await page.pdf({
       format: pageSettings.paperSize || 'A4',
@@ -44,7 +45,8 @@ export async function convert(html, pageSettings = {}) {
     });
     return pdfBuffer;
   } finally {
-    releasePage(page);
+    await context.close();
+    releaseSlot();
   }
 }
 
@@ -56,7 +58,7 @@ export async function shutdown() {
   if (browser) {
     await browser.close();
     browser = null;
-    pagePool = [];
+    activeCount = 0;
     waitQueue = [];
   }
 }

@@ -25,3 +25,10 @@ export class DataFetchError extends Error {
     this.name = 'DataFetchError';
   }
 }
+
+export class PdfEngineDisabledError extends Error {
+  constructor() {
+    super('PDF generation is disabled. Set ENABLE_PDF_ENGINE=true to enable it.');
+    this.name = 'PdfEngineDisabledError';
+  }
+}

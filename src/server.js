@@ -14,8 +14,12 @@ const app = createApp({
 });
 
 async function start() {
-  await initPdfPool(config.maxConcurrentPdf);
-  logger.info('PDF pool initialized', { concurrency: config.maxConcurrentPdf });
+  if (config.enablePdfEngine) {
+    await initPdfPool(config.maxConcurrentPdf);
+    logger.info('PDF pool initialized', { concurrency: config.maxConcurrentPdf });
+  } else {
+    logger.info('PDF engine disabled (ENABLE_PDF_ENGINE=false)');
+  }
 
   return app.listen(config.port, () => {
     logger.info('Template service listening', { port: config.port });

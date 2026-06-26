@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import RenderService from '../services/render-service.js';
-import { ValidationError, TemplateNotFoundError, TemplateDisabledError, DataFetchError } from '../errors.js';
+import { ValidationError, TemplateNotFoundError, TemplateDisabledError, DataFetchError, PdfEngineDisabledError } from '../errors.js';
 import logger from '../logger.js';
 
 const router = Router();
@@ -48,6 +48,7 @@ function errorToStatus(err) {
   if (err instanceof TemplateNotFoundError) return 404;
   if (err instanceof TemplateDisabledError) return 404;
   if (err instanceof DataFetchError) return 502;
+  if (err instanceof PdfEngineDisabledError) return 501;
   return 500;
 }
 

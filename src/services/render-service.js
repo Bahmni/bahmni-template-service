@@ -1,6 +1,6 @@
 import path from 'path';
 import config from '../config.js';
-import { ValidationError } from '../errors.js';
+import { ValidationError, PdfEngineDisabledError } from '../errors.js';
 import logger from '../logger.js';
 import TemplateStore from './template-store.js';
 import I18n from './i18n.js';
@@ -67,6 +67,9 @@ export default class RenderService {
 
   async formatOutput(html, format, template) {
     if (format === 'pdf') {
+      if (!config.enablePdfEngine) {
+        throw new PdfEngineDisabledError();
+      }
       const { convert } = await import('./pdf-pool.js');
       return {
         type: 'pdf',

@@ -1,6 +1,6 @@
-FROM node:24-alpine
+FROM mcr.microsoft.com/playwright:v1.50.0-noble
 
-RUN apk add --no-cache curl
+RUN apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ ENV TEMPLATES_DIR=/etc/bahmni_config/print-templates
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:${PORT}/template-service/health || exit 1
 
 CMD ["node", "dist/server.js"]

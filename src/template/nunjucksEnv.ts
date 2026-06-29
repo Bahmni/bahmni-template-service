@@ -8,7 +8,8 @@
  */
 
 import nunjucks from 'nunjucks';
-import { templatesDir } from '../config';
+
+import { NUNJUCKS_CACHE, templatesDir } from '../config';
 import { evaluateFhirPath } from './fhirPath';
 import {
   barcodeFilter,
@@ -18,6 +19,7 @@ import {
   round as roundValue,
 } from './filters';
 import { createTranslator } from './translations';
+import { AssetService } from './assetService';
 
 const envCache = new Map<string, nunjucks.Environment>();
 
@@ -26,8 +28,10 @@ export function createEnvironment(locale: string): nunjucks.Environment {
   const cached = envCache.get(cacheKey);
   if (cached) return cached;
 
+  const assetService = new AssetService(templatesDir());
+
   const env = new nunjucks.Environment(
-    new nunjucks.FileSystemLoader(templatesDir(), { noCache: true }),
+    new nunjucks.FileSystemLoader(templatesDir(), { noCache: !NUNJUCKS_CACHE }),
     { autoescape: true, trimBlocks: true, lstripBlocks: true },
   );
 
@@ -50,6 +54,14 @@ export function createEnvironment(locale: string): nunjucks.Environment {
 
   env.addFilter('round', (value: number, decimals: number = 0): string =>
     roundValue(value, decimals),
+  );
+
+  // Converts a named asset filename (e.g. 'logo.png') to a base64 data URI.
+  // Assets are resolved from the shared `assets/` folder inside TEMPLATES_DIR.
+  // Use this filter whenever an image must be self-contained in a PDF:
+  //   <img src="{{ 'hospital-logo.png' | asset }}" />
+  env.addFilter('asset', (relativePath: unknown): string =>
+    assetService.toDataUri(relativePath),
   );
 
   envCache.set(cacheKey, env);

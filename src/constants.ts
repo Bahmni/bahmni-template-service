@@ -42,9 +42,21 @@ export const HTTP_STATUS = {
   BAD_GATEWAY: 502,
 } as const;
 
-export const RENDER_FORMAT = 'html';
+export const HTML_FORMAT = 'html';
+export const PDF_FORMAT = 'pdf';
+export const RENDER_FORMATS = [HTML_FORMAT, PDF_FORMAT] as const;
+export const DEFAULT_MAX_CONCURRENT_PDF = 2;
+export const CONTENT_TYPE_PDF = 'application/pdf';
+export const ASSETS_DIR = 'assets';
 
 export const API_BASE = '/template-service/api';
 export const TEMPLATES_PATH = `${API_BASE}/templates`;
 export const RENDER_PATH = `${API_BASE}/render`;
 export const HEALTH_PATH = '/template-service/health';
+
+export const SUPPORTED_MIME_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+};

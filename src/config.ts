@@ -30,15 +30,12 @@ export const REQUEST_TIMEOUT_MS = process.env.OPENMRS_TIMEOUT_MS
   ? parseInt(process.env.OPENMRS_TIMEOUT_MS, 10)
   : DEFAULT_OPENMRS_TIMEOUT_MS;
 
-// PDF feature gate — set PDF_ENABLED=true when Playwright/Chromium is available
 export const PDF_ENABLED: boolean =
   process.env.PDF_ENABLED?.toLowerCase() === 'true';
 
-// Number of Playwright pages in the pool (controls PDF concurrency)
 export const MAX_CONCURRENT_PDF: number = process.env.MAX_CONCURRENT_PDF
   ? parseInt(process.env.MAX_CONCURRENT_PDF, 10)
   : DEFAULT_MAX_CONCURRENT_PDF;
 
-// When true, nunjucks caches compiled templates in memory (production optimization)
 export const NUNJUCKS_CACHE: boolean =
   process.env.NUNJUCKS_CACHE?.toLowerCase() === 'true';

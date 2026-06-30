@@ -202,8 +202,6 @@ Copy `.env.example` to `.env` for local development.
 | `MAX_CONCURRENT_PDF` | `2` | Size of the pre-warmed Playwright page pool — the number of PDFs rendered concurrently (excess requests queue) |
 | `NUNJUCKS_CACHE` | `false` | Cache compiled Nunjucks templates in memory. Leave `false` so template edits are picked up live; set `true` in production for throughput |
 
-> **PDF support requires a Chromium browser.** The Docker image is built on `mcr.microsoft.com/playwright:v1.61.1-noble`, which bundles it. For local PDF rendering, run `npx playwright install chromium` once after `yarn install`.
-
 ---
 
 ## 7. Running locally
@@ -211,6 +209,9 @@ Copy `.env.example` to `.env` for local development.
 ```bash
 # 1. Install dependencies
 yarn install
+
+# 1.1. For pdf support 
+npx playwright install chromium
 
 # 2. Copy and edit env file
 cp .env.example .env
@@ -233,6 +234,8 @@ curl -s -X POST http://localhost:8080/template-service/api/render \
   -d '{"templateId":"REG_CARD_V1","format":"pdf","locale":"en","context":{"patientUuid":"<uuid>"}}' \
   -o rendered.pdf
 ```
+
+> **PDF support requires a Chromium browser.** The Docker image is built on `mcr.microsoft.com/playwright:v1.61.1-noble`, which bundles it. For local PDF rendering, run `npx playwright install chromium` once after `yarn install`.
 
 ---
 

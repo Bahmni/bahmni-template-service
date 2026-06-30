@@ -107,8 +107,7 @@ describe('validateRenderRequest', () => {
 
     expect(statusSpy).toHaveBeenCalledWith(400);
     expect(jsonSpy).toHaveBeenCalledWith({
-      message:
-        'Error: PDF generation is not enabled',
+      message: 'Error: PDF generation is not enabled',
     });
     expect(mockNext).not.toHaveBeenCalled();
   });

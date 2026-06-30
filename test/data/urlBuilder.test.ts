@@ -7,9 +7,9 @@
  * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
  */
 
-import { ValidationError } from '../errors';
-import { DataSource } from '../types';
-import { buildUrl, substitute } from './urlBuilder';
+import { buildUrl, substitute } from '../../src/data/urlBuilder';
+import { ValidationError } from '../../src/errors';
+import { DataSource } from '../../src/types';
 
 const BASE = 'http://openmrs:8080';
 
@@ -40,9 +40,9 @@ describe('urlBuilder', () => {
     });
 
     it('includes label in error message', () => {
-      expect(() =>
-        substitute('{{missing}}', {}, 'my custom label'),
-      ).toThrow(/my custom label/);
+      expect(() => substitute('{{missing}}', {}, 'my custom label')).toThrow(
+        /my custom label/,
+      );
     });
   });
 

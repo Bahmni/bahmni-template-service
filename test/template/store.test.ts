@@ -10,8 +10,8 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import * as fileSystem from '../fileSystem';
-import { templateStore } from './store';
+import * as fileSystem from '../../src/fileSystem';
+import { templateStore } from '../../src/template/store';
 
 function setupTemplatesDir(): { dir: string; cleanup: () => void } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tstore-'));
@@ -181,7 +181,9 @@ describe('templateStore', () => {
       fs.writeFileSync(
         path.join(t.dir, 'templates.json'),
         JSON.stringify({
-          templates: [{ id: 'ESCAPE', name: 'Escape', folder: '../escape' }],
+          templates: [
+            { id: 'ESCAPE', name: 'Escape', folder: '../../src/escape' },
+          ],
         }),
       );
       expect(templateStore.get('ESCAPE')).toBeNull();

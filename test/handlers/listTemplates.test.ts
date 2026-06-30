@@ -9,11 +9,11 @@
 
 import { Request, Response } from 'express';
 
-import { listTemplates } from './listTemplates';
+import { listTemplates } from '../../src/handlers/listTemplates';
 
-jest.mock('../template/store');
+jest.mock('../../src/template/store');
 
-const mockStore = jest.requireMock('../template/store');
+const mockStore = jest.requireMock('../../src/template/store');
 
 describe('listTemplates', () => {
   let mockReq: Partial<Request>;

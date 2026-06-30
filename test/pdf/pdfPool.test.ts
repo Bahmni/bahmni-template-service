@@ -12,7 +12,7 @@ import {
   initPdfPool,
   isPdfPoolReady,
   shutdownPdfPool,
-} from './pdfPool';
+} from '../../src/pdf/pdfPool';
 
 const mockPdf = jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4 mock'));
 const mockSetContent = jest.fn().mockResolvedValue(undefined);

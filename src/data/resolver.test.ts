@@ -290,6 +290,143 @@ describe('resolver', () => {
     });
   });
 
+  describe('image sources', () => {
+    const PNG_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a]);
+
+    it('returns a base64 data URI built from the response content-type', async () => {
+      mockedAxios.get.mockResolvedValue({
+        status: 200,
+        data: PNG_BYTES,
+        headers: { 'content-type': 'image/png' },
+      });
+      const result = await resolve(
+        {
+          sources: {
+            patientPhoto: {
+              api: 'image',
+              resource: '/openmrs/ws/rest/v1/patientImage',
+              params: { patientUuid: '{{patientUuid}}' },
+            },
+          },
+        },
+        { patientUuid: 'abc-123' },
+        {},
+      );
+      expect(result.patientPhoto).toBe(
+        `data:image/png;base64,${PNG_BYTES.toString('base64')}`,
+      );
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        `${BASE}/openmrs/ws/rest/v1/patientImage?patientUuid=abc-123`,
+        expect.objectContaining({ responseType: 'arraybuffer' }),
+      );
+    });
+
+    it('falls back to image/jpeg when no content-type header is present', async () => {
+      mockedAxios.get.mockResolvedValue({
+        status: 200,
+        data: PNG_BYTES,
+        headers: {},
+      });
+      const result = await resolve(
+        {
+          sources: {
+            patientPhoto: {
+              api: 'image',
+              resource: '/openmrs/ws/rest/v1/patientImage',
+            },
+          },
+        },
+        {},
+        {},
+      );
+      expect(result.patientPhoto).toBe(
+        `data:image/jpeg;base64,${PNG_BYTES.toString('base64')}`,
+      );
+    });
+
+    it('returns null when the image body is empty', async () => {
+      mockedAxios.get.mockResolvedValue({
+        status: 200,
+        data: Buffer.alloc(0),
+        headers: { 'content-type': 'image/jpeg' },
+      });
+      const result = await resolve(
+        {
+          sources: {
+            patientPhoto: {
+              api: 'image',
+              resource: '/openmrs/ws/rest/v1/patientImage',
+            },
+          },
+        },
+        {},
+        {},
+      );
+      expect(result.patientPhoto).toBeNull();
+    });
+
+    it('returns null on 404 instead of throwing (patient has no photo)', async () => {
+      mockedAxios.get.mockRejectedValue(axiosError(404));
+      const result = await resolve(
+        {
+          sources: {
+            patientPhoto: {
+              api: 'image',
+              resource: '/openmrs/ws/rest/v1/patientImage',
+            },
+          },
+        },
+        {},
+        {},
+      );
+      expect(result.patientPhoto).toBeNull();
+    });
+
+    it('still throws UnauthorizedError on 401 for image sources', async () => {
+      mockedAxios.get.mockRejectedValue(axiosError(401));
+      await expect(
+        resolve(
+          {
+            sources: {
+              patientPhoto: {
+                api: 'image',
+                resource: '/openmrs/ws/rest/v1/patientImage',
+              },
+            },
+          },
+          {},
+          {},
+        ),
+      ).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it('forwards auth headers for image sources', async () => {
+      mockedAxios.get.mockResolvedValue({
+        status: 200,
+        data: PNG_BYTES,
+        headers: { 'content-type': 'image/png' },
+      });
+      await resolve(
+        {
+          sources: {
+            patientPhoto: {
+              api: 'image',
+              resource: '/openmrs/ws/rest/v1/patientImage',
+            },
+          },
+        },
+        {},
+        { sessionId: 'sess-abc' },
+      );
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({ Cookie: 'JSESSIONID=sess-abc' }),
+        }),
+      );
+    });
+  });
+
   describe('parallel fetch', () => {
     it('fetches multiple sources in parallel and returns all results', async () => {
       mockedAxios.get

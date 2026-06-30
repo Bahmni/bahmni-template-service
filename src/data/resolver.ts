@@ -9,7 +9,11 @@
 
 import axios from 'axios';
 import { FHIR_BASE, OPENMRS_URL, REQUEST_TIMEOUT_MS } from '../config';
-import { AXIOS_TIMEOUT_CODE, HTTP_STATUS } from '../constants';
+import {
+  AXIOS_TIMEOUT_CODE,
+  DEFAULT_IMAGE_MIME,
+  HTTP_STATUS,
+} from '../constants';
 import {
   BadGatewayError,
   NotFoundError,
@@ -38,70 +42,127 @@ async function fetchSources(
   context: Record<string, string>,
   auth: AuthHeaders,
 ): Promise<ResolvedSources> {
-  const headers: Record<string, string> = {
-    Accept: 'application/fhir+json, application/json',
-  };
-  if (auth.authorization) headers['Authorization'] = auth.authorization;
-  if (auth.sessionId) headers['Cookie'] = `JSESSIONID=${auth.sessionId}`;
-  else if (auth.cookie) headers['Cookie'] = auth.cookie;
+  const authHeaders: Record<string, string> = {};
+  if (auth.authorization) authHeaders['Authorization'] = auth.authorization;
+  if (auth.sessionId) authHeaders['Cookie'] = `JSESSIONID=${auth.sessionId}`;
+  else if (auth.cookie) authHeaders['Cookie'] = auth.cookie;
 
   const entries = Object.entries(sources);
 
   const results = await Promise.all(
     entries.map(async ([sourceName, source]) => {
       const url = buildUrl(source, context);
-      logger.info({ sourceName, url }, 'DataResolver: fetching source');
-      try {
-        const response = await axios.get(url, {
-          headers,
-          timeout: REQUEST_TIMEOUT_MS,
-        });
-        logger.info(
-          { sourceName, status: response.status },
-          'DataResolver: source fetched',
-        );
-        return [sourceName, response.data] as [string, unknown];
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          const status = err.response?.status;
-          if (status === HTTP_STATUS.UNAUTHORIZED)
-            throw new UnauthorizedError(
-              'OpenMRS session expired. Please log in again.',
-            );
-          if (status === HTTP_STATUS.BAD_REQUEST) {
-            logger.warn(
-              { sourceName, url },
-              'DataResolver: 400 response — returning empty Bundle',
-            );
-            return [sourceName, { resourceType: 'Bundle', entry: [] }] as [
-              string,
-              unknown,
-            ];
-          }
-          if (status === HTTP_STATUS.NOT_FOUND)
-            throw new NotFoundError(
-              `OpenMRS resource not found for source: ${sourceName}`,
-            );
-          if (!err.response) {
-            if (err.code === AXIOS_TIMEOUT_CODE) {
-              throw new BadGatewayError(
-                `OpenMRS API timeout (>${REQUEST_TIMEOUT_MS}ms) when fetching source: ${sourceName}`,
-              );
-            }
-            throw new BadGatewayError(
-              `OpenMRS API unreachable when fetching source: ${sourceName}`,
-            );
-          }
-          throw new BadGatewayError(
-            `Unexpected status ${status} from OpenMRS for source: ${sourceName}`,
-          );
-        }
-        throw err;
-      }
+      const value =
+        source.api === 'image'
+          ? await fetchImageSource(sourceName, url, authHeaders)
+          : await fetchJsonSource(sourceName, url, authHeaders);
+      return [sourceName, value] as [string, unknown];
     }),
   );
 
   return Object.fromEntries(results);
+}
+
+async function fetchJsonSource(
+  sourceName: string,
+  url: string,
+  authHeaders: Record<string, string>,
+): Promise<unknown> {
+  logger.info({ sourceName, url }, 'DataResolver: fetching source');
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        Accept: 'application/fhir+json, application/json',
+        ...authHeaders,
+      },
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    logger.info(
+      { sourceName, status: response.status },
+      'DataResolver: source fetched',
+    );
+    return response.data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const status = err.response?.status;
+      if (status === HTTP_STATUS.BAD_REQUEST) {
+        logger.warn(
+          { sourceName, url },
+          'DataResolver: 400 response — returning empty Bundle',
+        );
+        return { resourceType: 'Bundle', entry: [] };
+      }
+      if (status === HTTP_STATUS.NOT_FOUND)
+        throw new NotFoundError(
+          `OpenMRS resource not found for source: ${sourceName}`,
+        );
+    }
+    throw mapFetchError(err, sourceName);
+  }
+}
+
+async function fetchImageSource(
+  sourceName: string,
+  url: string,
+  authHeaders: Record<string, string>,
+): Promise<string | null> {
+  logger.info({ sourceName, url }, 'DataResolver: fetching image source');
+  try {
+    const response = await axios.get<ArrayBuffer>(url, {
+      headers: { Accept: '*/*', ...authHeaders },
+      timeout: REQUEST_TIMEOUT_MS,
+      responseType: 'arraybuffer',
+    });
+    const buffer = Buffer.from(response.data);
+    if (buffer.length === 0) {
+      logger.info(
+        { sourceName },
+        'DataResolver: image source empty — no photo',
+      );
+      return null;
+    }
+    const contentType =
+      (response.headers['content-type'] as string | undefined)?.split(';')[0] ??
+      DEFAULT_IMAGE_MIME;
+    logger.info(
+      { sourceName, status: response.status, contentType },
+      'DataResolver: image source fetched',
+    );
+    return `data:${contentType};base64,${buffer.toString('base64')}`;
+  } catch (err) {
+    if (
+      axios.isAxiosError(err) &&
+      err.response?.status === HTTP_STATUS.NOT_FOUND
+    ) {
+      logger.info({ sourceName }, 'DataResolver: image source 404 — no photo');
+      return null;
+    }
+    throw mapFetchError(err, sourceName);
+  }
+}
+
+function mapFetchError(err: unknown, sourceName: string): Error {
+  if (axios.isAxiosError(err)) {
+    const status = err.response?.status;
+    if (status === HTTP_STATUS.UNAUTHORIZED)
+      return new UnauthorizedError(
+        'OpenMRS session expired. Please log in again.',
+      );
+    if (!err.response) {
+      if (err.code === AXIOS_TIMEOUT_CODE) {
+        return new BadGatewayError(
+          `OpenMRS API timeout (>${REQUEST_TIMEOUT_MS}ms) when fetching source: ${sourceName}`,
+        );
+      }
+      return new BadGatewayError(
+        `OpenMRS API unreachable when fetching source: ${sourceName}`,
+      );
+    }
+    return new BadGatewayError(
+      `Unexpected status ${status} from OpenMRS for source: ${sourceName}`,
+    );
+  }
+  return err as Error;
 }
 
 function substitute(

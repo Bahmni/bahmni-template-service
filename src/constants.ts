@@ -48,6 +48,7 @@ export const RENDER_FORMATS = [HTML_FORMAT, PDF_FORMAT] as const;
 export const DEFAULT_MAX_CONCURRENT_PDF = 2;
 export const CONTENT_TYPE_PDF = 'application/pdf';
 export const ASSETS_DIR = 'assets';
+export const DEFAULT_IMAGE_MIME = 'image/jpeg';
 
 export const API_BASE = '/template-service/api';
 export const TEMPLATES_PATH = `${API_BASE}/templates`;

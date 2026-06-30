@@ -18,7 +18,7 @@ export interface TemplateRegistry {
 }
 
 export interface DataSource {
-  api: 'fhir' | 'rest';
+  api: 'fhir' | 'rest' | 'image';
   resource: string;
   params?: Record<string, string | string[]>;
 }

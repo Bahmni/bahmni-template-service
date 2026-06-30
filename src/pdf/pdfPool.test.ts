@@ -7,10 +7,13 @@
  * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
  */
 
-// ---------------------------------------------------------------------------
-// Mock playwright before any imports so the module system never loads the
-// real Chromium binaries during unit tests.
-// ---------------------------------------------------------------------------
+import {
+  convertToPdf,
+  initPdfPool,
+  isPdfPoolReady,
+  shutdownPdfPool,
+} from './pdfPool';
+
 const mockPdf = jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4 mock'));
 const mockSetContent = jest.fn().mockResolvedValue(undefined);
 const mockNewPage = jest.fn().mockImplementation(() =>
@@ -31,23 +34,9 @@ jest.mock('playwright', () => ({
   chromium: { launch: mockLaunch },
 }));
 
-// ---------------------------------------------------------------------------
-// Import the module under test AFTER the mock is registered.
-// ---------------------------------------------------------------------------
-import {
-  convertToPdf,
-  initPdfPool,
-  isPdfPoolReady,
-  shutdownPdfPool,
-} from './pdfPool';
-
-// ---------------------------------------------------------------------------
-// Helper – reset module state between test groups
-// ---------------------------------------------------------------------------
 async function resetPool(): Promise<void> {
   await shutdownPdfPool();
   jest.clearAllMocks();
-  // Restore default mock implementations after clearAllMocks
   mockPdf.mockResolvedValue(Buffer.from('%PDF-1.4 mock'));
   mockSetContent.mockResolvedValue(undefined);
   mockNewPage.mockImplementation(() =>
@@ -58,10 +47,6 @@ async function resetPool(): Promise<void> {
     Promise.resolve({ newPage: mockNewPage, close: mockClose }),
   );
 }
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('isPdfPoolReady', () => {
   afterEach(async () => resetPool());

@@ -43,9 +43,7 @@ export function validateRenderRequest(
     }
 
     if (format === PDF_FORMAT && !PDF_ENABLED) {
-      throw new ValidationError(
-        'PDF generation is not enabled on this instance. Set PDF_ENABLED=true to enable it.',
-      );
+      throw new ValidationError('Error: PDF generation is not enabled');
     }
 
     if (!LOCALE_REGEX.test(locale)) {

@@ -98,7 +98,7 @@ print-templates/
 {
   "sources": {
     "<sourceName>": {
-      "api": "fhir" | "rest",
+      "api": "fhir" | "rest" | "image",
       "resource": "<path with {{contextVar}} placeholders>",
       "params": { "<key>": "<value>" | ["<value1>", "<value2>"] }
     }
@@ -121,6 +121,7 @@ A param value can be a plain string (single value) or an array of strings (multi
 |---|---|
 | `fhir` | `<OPENMRS_URL>/openmrs/ws/fhir2/R4/<resource>?<params>` — `resource` is just the FHIR resource name, e.g. `Patient` |
 | `rest` | `<OPENMRS_URL><resource>?<params>` — `resource` must be the **full path from the domain root**, e.g. `/openmrs/ws/rest/v1/patientprofile/{{patientUuid}}` |
+| `image` | Same URL rules as `rest` (full path from the domain root). The endpoint is fetched as **binary** and the source resolves to a base64 **data URI** (`data:<mime>;base64,...`) ready to drop into an `<img src>` — see below |
 
 **Example:**
 ```json
@@ -164,6 +165,31 @@ A param value can be a plain string (single value) or an array of strings (multi
 | 401 | Throws — service returns a 401 session-expired response |
 | 404 | Throws — service returns a 404 not-found response |
 | Network timeout | Throws — service returns a 502 response |
+
+**Image sources (`"api": "image"`):**
+
+Use `image` to embed a patient photo, signature, or any binary image fetched from OpenMRS. The response is read as binary and converted to a base64 data URI, so it can be used directly in an `<img src>` without a separate `compute.js` step. The MIME type comes from the response `Content-Type` header (falling back to `image/jpeg`).
+
+```json
+{
+  "sources": {
+    "patientPhoto": {
+      "api": "image",
+      "resource": "/openmrs/ws/rest/v1/patientImage/{{patientUuid}}"
+    }
+  }
+}
+```
+
+Consume it directly in `template.html`:
+
+```html
+{% if patientPhoto %}
+  <img src="{{ patientPhoto }}" alt="Patient photo" />
+{% endif %}
+```
+
+Unlike JSON sources, an image source resolves to `null` (rather than throwing) when the patient has no image — an empty response body or a `404`. Guard with `{% if patientPhoto %}` as shown. Other failures (timeout, 5xx) still throw and surface as a `502`.
 
 ---
 
@@ -449,6 +475,16 @@ Evaluates a FHIRPath expression on an object in the template. Useful for per-row
   <td>{{ entry.resource | fhirpathEvaluate("Patient.name.first().text") }}</td>
 {% endfor %}
 ```
+
+### `| asset(filename)` — embed a static template asset
+
+Inlines a static image bundled with your templates as a base64 data URI, so logos, headers, and signatures print without any external request. Files live in an `assets/` folder at the **root of `TEMPLATES_DIR`** (`<TEMPLATES_DIR>/assets/`).
+
+```html
+<img src="{{ 'logo.png' | asset }}" alt="Hospital logo" />
+```
+
+Supported file types: `.png`, `.jpg` / `.jpeg`, and `.svg`. An unsupported extension or a missing file raises a render error (`500`), so keep asset filenames in sync with the files on disk.
 
 ### Nunjucks built-in filters
 
@@ -835,6 +871,19 @@ Verify barcodes and QR codes are present (both produce base64 PNG `<img>` tags):
 grep -c 'data:image/png;base64' /tmp/rendered.html   # barcode + qrcode count
 ```
 
+To test the same template as a PDF (requires the service to run with `PDF_ENABLED=true`), set `"format": "pdf"` and save the binary response:
+```bash
+curl -s -X POST http://localhost:8080/template-service/api/render \
+  -H "Content-Type: application/json" \
+  -H "Cookie: JSESSIONID=<your-session-id>" \
+  -d '{
+    "templateId": "REG_CARD_V1",
+    "format": "pdf",
+    "locale": "en",
+    "context": { "patientUuid": "<real-patient-uuid>" }
+  }' -o /tmp/rendered.pdf && open /tmp/rendered.pdf
+```
+
 Check the service logs for errors:
 ```bash
 docker logs bahmni-standard-template-service-1 --tail 30
@@ -953,12 +1002,19 @@ throw new ValidationError('visitUuid is required');
 | Field | Required | Default | Description |
 |---|---|---|---|
 | `templateId` | Yes | — | ID from `templates.json` |
-| `format` | No | `"html"` | Only `"html"` is supported |
+| `format` | No | `"html"` | `"html"` returns rendered HTML as JSON; `"pdf"` returns a PDF document (requires `PDF_ENABLED=true`) |
 | `locale` | No | `"en"` | BCP 47 locale tag for translations and date formatting |
 | `context` | No | `{}` | UUIDs passed to `data-config.json` placeholders and `compute.js` |
 | `data` | No | `{}` | Free-form object available as `{{ data.* }}` in templates and `data` in `compute.js` |
 
-**Response:** `{ "html": "<rendered HTML string>" }`
+**Response:**
+
+| `format` | Response |
+|---|---|
+| `"html"` | `200` `{ "html": "<rendered HTML string>" }` (`Content-Type: application/json`) |
+| `"pdf"` | `200` binary PDF — `Content-Type: application/pdf`, `Content-Disposition: inline; filename="<templateId>.pdf"` |
+
+Requesting `"format": "pdf"` when PDF is disabled returns `400` with `{ "message": "Error: PDF generation is not enabled" }`.
 
 ### `GET /template-service/api/templates`
 
@@ -991,3 +1047,6 @@ Pass the user's OpenMRS session using one of:
 | `TEMPLATES_DIR` | `/etc/bahmni_config/print-templates` | Template directory mount path |
 | `PORT` | `8080` | Service HTTP port |
 | `LOG_LEVEL` | `info` | Log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) |
+| `PDF_ENABLED` | `false` | Enable `format: "pdf"`. When `false`, PDF requests return `400`. Requires a bundled Chromium (Playwright Docker image, or `npx playwright install chromium` locally) |
+| `MAX_CONCURRENT_PDF` | `2` | Number of PDFs rendered concurrently by the Playwright page pool (excess requests queue) |
+| `NUNJUCKS_CACHE` | `false` | Cache compiled templates in memory. Leave `false` for live template edits; set `true` in production |

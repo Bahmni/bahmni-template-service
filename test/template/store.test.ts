@@ -10,8 +10,8 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import * as fileSystem from '../../src/fileSystem';
-import { templateStore } from '../../src/template/store';
+import * as fileSystem from '@src/fileSystem';
+import { templateStore } from '@src/template/store';
 
 function setupTemplatesDir(): { dir: string; cleanup: () => void } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tstore-'));

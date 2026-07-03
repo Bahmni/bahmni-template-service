@@ -10,6 +10,7 @@
 import type { Browser, Page } from 'playwright';
 
 import { DEFAULT_MAX_CONCURRENT_PDF } from '../constants';
+import logger from '../logger';
 
 export interface PageSettings {
   paperSize?: string;
@@ -84,6 +85,9 @@ export async function convertToPdf(
       margin: { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' },
     });
     return Buffer.from(pdfBytes);
+  } catch (err) {
+    logger.error({ err }, 'PDF generation failed');
+    throw err;
   } finally {
     releasePage(page);
   }

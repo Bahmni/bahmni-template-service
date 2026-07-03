@@ -10,9 +10,7 @@
 import { Router } from 'express';
 
 import { HEALTH_PATH, RENDER_PATH, TEMPLATES_PATH } from './constants';
-import { healthCheck } from './handlers/healthCheck';
-import { listTemplates } from './handlers/listTemplates';
-import { renderTemplate } from './handlers/renderTemplate';
+import { healthCheck, listTemplates, renderTemplate } from './controllers';
 import { validateRenderRequest } from './middleware/validateRenderRequest';
 
 const router = Router();

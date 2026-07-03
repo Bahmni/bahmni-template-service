@@ -9,16 +9,16 @@
 
 import { Request, Response } from 'express';
 
-import { AppError, NotFoundError, UnauthorizedError } from '../../src/errors';
-import { renderTemplate } from '../../src/handlers/renderTemplate';
+import { AppError, NotFoundError, UnauthorizedError } from '@src/errors';
+import { renderTemplate } from '@src/controllers/renderTemplate';
 
-jest.mock('../../src/template/renderPipeline');
-jest.mock('../../src/pdf/pdfPool');
-jest.mock('../../src/logger');
+jest.mock('@src/template/renderPipeline');
+jest.mock('@src/pdf/pdfPool');
+jest.mock('@src/logger');
 
-const mockPipeline = jest.requireMock('../../src/template/renderPipeline');
-const mockPdfPool = jest.requireMock('../../src/pdf/pdfPool');
-const mockLogger = jest.requireMock('../../src/logger');
+const mockPipeline = jest.requireMock('@src/template/renderPipeline');
+const mockPdfPool = jest.requireMock('@src/pdf/pdfPool');
+const mockLogger = jest.requireMock('@src/logger');
 
 describe('renderTemplate', () => {
   let mockReq: Partial<Request>;

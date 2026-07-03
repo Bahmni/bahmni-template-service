@@ -9,13 +9,13 @@
 
 import { Request, Response } from 'express';
 
-import { healthCheck } from '../../src/handlers/healthCheck';
+import { healthCheck } from '@src/controllers/healthCheck';
 
-jest.mock('../../src/config');
-jest.mock('../../src/pdf/pdfPool');
+jest.mock('@src/config');
+jest.mock('@src/pdf/pdfPool');
 
-const mockConfig = jest.requireMock('../../src/config');
-const mockPdfPool = jest.requireMock('../../src/pdf/pdfPool');
+const mockConfig = jest.requireMock('@src/config');
+const mockPdfPool = jest.requireMock('@src/pdf/pdfPool');
 
 describe('healthCheck', () => {
   let mockReq: Partial<Request>;

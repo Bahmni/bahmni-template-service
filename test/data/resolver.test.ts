@@ -8,13 +8,13 @@
  */
 
 import axios from 'axios';
-import { resolve } from '../../src/data/resolver';
+import { resolve } from '@src/data/resolver';
 import {
   BadGatewayError,
   NotFoundError,
   UnauthorizedError,
   ValidationError,
-} from '../../src/errors';
+} from '@src/errors';
 
 jest.mock('axios');
 const mockedAxios = jest.mocked(axios);

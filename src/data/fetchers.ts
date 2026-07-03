@@ -8,7 +8,7 @@
  */
 
 import axios from 'axios';
-import { DEFAULT_IMAGE_MIME, HTTP_STATUS } from '../constants';
+import { HTTP_STATUS, MimeType } from '../constants';
 import { NotFoundError } from '../errors';
 import { request } from '../http/httpClient';
 import logger from '../logger';
@@ -65,7 +65,7 @@ export async function fetchImageSource(
 
     const contentType =
       (response.headers['content-type'] as string | undefined)?.split(';')[0] ??
-      DEFAULT_IMAGE_MIME;
+      MimeType.JPEG;
 
     return `data:${contentType};base64,${buffer.toString('base64')}`;
   } catch (err) {

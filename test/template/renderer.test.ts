@@ -11,8 +11,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { render } from '../../src/template/renderer';
-import { _resetTranslationCacheForTests } from '../../src/template/translations';
+import { render } from '@src/template/renderer';
+import { _resetTranslationCacheForTests } from '@src/template/translations';
 
 function withTempTemplates(files: Record<string, string>): {
   dir: string;

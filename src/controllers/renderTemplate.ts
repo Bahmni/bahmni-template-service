@@ -10,14 +10,12 @@
 import { Request, Response } from 'express';
 
 import {
-  CONTENT_TYPE_PDF,
   DEFAULT_LOCALE,
   HEADER_AUTHORIZATION,
   HEADER_SESSION_ID,
-  HTML_FORMAT,
   HTTP_STATUS,
   JSESSIONID_PREFIX,
-  PDF_FORMAT,
+  MimeType,
 } from '../constants';
 import { AppError } from '../errors';
 import logger from '../logger';
@@ -51,7 +49,7 @@ async function sendPdfResponse(
   html: string,
 ): Promise<void> {
   const pdfBuffer = await convertToPdf(html);
-  res.setHeader('Content-Type', CONTENT_TYPE_PDF);
+  res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${templateId}.pdf"`);
   res.send(pdfBuffer);
 }
@@ -62,7 +60,7 @@ export async function renderTemplate(
 ): Promise<void> {
   const {
     templateId,
-    format = HTML_FORMAT,
+    format = MimeType.HTML,
     locale = DEFAULT_LOCALE,
     context,
     data,
@@ -78,10 +76,10 @@ export async function renderTemplate(
     });
 
     switch (format) {
-      case HTML_FORMAT:
+      case MimeType.HTML:
         sendHtmlResponse(res, html);
         break;
-      case PDF_FORMAT:
+      case MimeType.PDF:
         await sendPdfResponse(res, templateId, html);
         break;
     }

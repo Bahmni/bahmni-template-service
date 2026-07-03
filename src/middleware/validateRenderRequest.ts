@@ -12,9 +12,8 @@ import { NextFunction, Request, Response } from 'express';
 import { PDF_ENABLED } from '../config';
 import {
   DEFAULT_LOCALE,
-  HTML_FORMAT,
   LOCALE_REGEX,
-  PDF_FORMAT,
+  MimeType,
   RENDER_FORMATS,
 } from '../constants';
 import { AppError, ValidationError } from '../errors';
@@ -27,7 +26,7 @@ export function validateRenderRequest(
 ): void {
   const {
     templateId,
-    format = HTML_FORMAT,
+    format = MimeType.HTML,
     locale = DEFAULT_LOCALE,
   } = req.body as RenderRequest;
 
@@ -42,7 +41,7 @@ export function validateRenderRequest(
       );
     }
 
-    if (format === PDF_FORMAT && !PDF_ENABLED) {
+    if (format === MimeType.PDF && !PDF_ENABLED) {
       throw new ValidationError('Error: PDF generation is not enabled');
     }
 

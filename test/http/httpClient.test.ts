@@ -12,8 +12,8 @@ import {
   BadGatewayError,
   NotFoundError,
   UnauthorizedError,
-} from '../../src/errors';
-import { request } from '../../src/http/httpClient';
+} from '@src/errors';
+import { request } from '@src/http/httpClient';
 
 jest.mock('axios');
 const mockedAxios = jest.mocked(axios);

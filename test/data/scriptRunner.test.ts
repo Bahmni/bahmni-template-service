@@ -10,9 +10,9 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { runComputeScript } from '../../src/data/scriptRunner';
-import { AppError, ValidationError } from '../../src/errors';
-import { _resetTranslationCacheForTests } from '../../src/template/translations';
+import { runComputeScript } from '@src/data/scriptRunner';
+import { AppError, ValidationError } from '@src/errors';
+import { _resetTranslationCacheForTests } from '@src/template/translations';
 
 function writeScript(dir: string, name: string, content: string): string {
   const p = path.join(dir, name);

@@ -9,11 +9,11 @@
 
 import { NextFunction, Request, Response } from 'express';
 
-import { validateRenderRequest } from '../../src/middleware/validateRenderRequest';
+import { validateRenderRequest } from '@src/middleware/validateRenderRequest';
 
-jest.mock('../../src/config');
+jest.mock('@src/config');
 
-const mockConfig = jest.requireMock('../../src/config');
+const mockConfig = jest.requireMock('@src/config');
 
 describe('validateRenderRequest', () => {
   let mockReq: Partial<Request>;

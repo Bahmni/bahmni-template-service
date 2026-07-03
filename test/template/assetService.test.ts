@@ -11,7 +11,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { AssetService } from '../../src/template/assetService';
+import { AssetService } from '@src/template/assetService';
 
 // 1×1 red pixel PNG (minimal valid PNG)
 const TINY_PNG = Buffer.from(

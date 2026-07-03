@@ -10,7 +10,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { ASSETS_DIR, SUPPORTED_MIME_TYPES } from '../constants';
+import { ASSETS_DIR, SUPPORTED_IMAGE_MIME_TYPES } from '../constants';
 
 export class AssetService {
   private readonly assetsDir: string;
@@ -29,7 +29,7 @@ export class AssetService {
 
     const filePath = path.join(this.assetsDir, relativePath);
     const ext = path.extname(filePath).toLowerCase();
-    const mime = SUPPORTED_MIME_TYPES[ext];
+    const mime = SUPPORTED_IMAGE_MIME_TYPES[ext];
 
     if (!mime) {
       throw new Error(`Unsupported asset type: ${ext}`);

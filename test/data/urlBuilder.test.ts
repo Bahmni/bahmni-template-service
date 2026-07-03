@@ -7,9 +7,9 @@
  * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
  */
 
-import { buildUrl, substitute } from '../../src/data/urlBuilder';
-import { ValidationError } from '../../src/errors';
-import { DataSource } from '../../src/types';
+import { buildUrl, substitute } from '@src/data/urlBuilder';
+import { ValidationError } from '@src/errors';
+import { DataSource } from '@src/types';
 
 const BASE = 'http://openmrs:8080';
 

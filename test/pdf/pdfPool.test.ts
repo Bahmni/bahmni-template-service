@@ -12,7 +12,17 @@ import {
   initPdfPool,
   isPdfPoolReady,
   shutdownPdfPool,
-} from '../../src/pdf/pdfPool';
+} from '@src/pdf/pdfPool';
+
+jest.mock('@src/logger', () => ({
+  __esModule: true,
+  default: {
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
+const mockLogger = jest.requireMock('@src/logger').default;
 
 const mockPdf = jest.fn().mockResolvedValue(Buffer.from('%PDF-1.4 mock'));
 const mockSetContent = jest.fn().mockResolvedValue(undefined);
@@ -22,11 +32,11 @@ const mockNewPage = jest.fn().mockImplementation(() =>
     pdf: mockPdf,
   }),
 );
-const mockClose = jest.fn().mockResolvedValue(undefined);
+const mockBrowserClose = jest.fn().mockResolvedValue(undefined);
 const mockLaunch = jest.fn().mockImplementation(() =>
   Promise.resolve({
     newPage: mockNewPage,
-    close: mockClose,
+    close: mockBrowserClose,
   }),
 );
 
@@ -42,9 +52,9 @@ async function resetPool(): Promise<void> {
   mockNewPage.mockImplementation(() =>
     Promise.resolve({ setContent: mockSetContent, pdf: mockPdf }),
   );
-  mockClose.mockResolvedValue(undefined);
+  mockBrowserClose.mockResolvedValue(undefined);
   mockLaunch.mockImplementation(() =>
-    Promise.resolve({ newPage: mockNewPage, close: mockClose }),
+    Promise.resolve({ newPage: mockNewPage, close: mockBrowserClose }),
   );
 }
 
@@ -153,11 +163,27 @@ describe('convertToPdf', () => {
   });
 });
 
+describe('convertToPdf — error handling', () => {
+  afterEach(async () => resetPool());
+
+  it('logs and re-throws when pdf generation fails', async () => {
+    await initPdfPool(1);
+    const renderError = new Error('render failed');
+    mockPdf.mockRejectedValueOnce(renderError);
+
+    await expect(convertToPdf('<html/>')).rejects.toThrow('render failed');
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      { err: renderError },
+      'PDF generation failed',
+    );
+  });
+});
+
 describe('shutdownPdfPool', () => {
   it('closes the browser on shutdown', async () => {
     await initPdfPool(1);
     await shutdownPdfPool();
-    expect(mockClose).toHaveBeenCalledTimes(1);
+    expect(mockBrowserClose).toHaveBeenCalledTimes(1);
   });
 
   it('is idempotent — calling shutdown twice does not throw', async () => {

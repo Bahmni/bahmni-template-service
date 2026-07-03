@@ -9,8 +9,8 @@
 
 import { Request, Response } from 'express';
 
-import { AppError, NotFoundError, UnauthorizedError } from '@src/errors';
 import { renderTemplate } from '@src/controllers/renderTemplate';
+import { AppError, NotFoundError, UnauthorizedError } from '@src/errors';
 
 jest.mock('@src/template/renderPipeline');
 jest.mock('@src/pdf/pdfPool');

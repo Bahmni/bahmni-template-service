@@ -9,17 +9,18 @@
     "dev": "node --env-file=.env -e \"require('child_process').spawnSync('node', ['node_modules/.bin/ts-node-dev', '--respawn', '--transpile-only', 'src/server.ts'], {stdio: 'inherit', env: process.env})\"",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "format": "prettier --write src",
-    "format:check": "prettier --check src"
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix",
+    "format": "prettier --write src test",
+    "format:check": "prettier --check src test"
   },
   "dependencies": {
     "axios": "^1.7.2",
     "bwip-js": "^3.3.0",
     "express": "^4.19.2",
     "fhirpath": "^3.13.0",
-    "nunjucks": "^3.2.4"
+    "nunjucks": "^3.2.4",
+    "playwright": "^1.61.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

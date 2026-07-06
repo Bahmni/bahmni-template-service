@@ -8,6 +8,7 @@
  */
 
 import {
+  DEFAULT_MAX_CONCURRENT_PDF,
   DEFAULT_OPENMRS_TIMEOUT_MS,
   DEFAULT_OPENMRS_URL,
   DEFAULT_PORT,
@@ -28,3 +29,13 @@ export const FHIR_BASE = `${OPENMRS_URL}${FHIR_API_PATH}`;
 export const REQUEST_TIMEOUT_MS = process.env.OPENMRS_TIMEOUT_MS
   ? parseInt(process.env.OPENMRS_TIMEOUT_MS, 10)
   : DEFAULT_OPENMRS_TIMEOUT_MS;
+
+export const PDF_ENABLED: boolean =
+  process.env.PDF_ENABLED?.toLowerCase() === 'true';
+
+export const MAX_CONCURRENT_PDF: number = process.env.MAX_CONCURRENT_PDF
+  ? parseInt(process.env.MAX_CONCURRENT_PDF, 10)
+  : DEFAULT_MAX_CONCURRENT_PDF;
+
+export const NUNJUCKS_CACHE: boolean =
+  process.env.NUNJUCKS_CACHE?.toLowerCase() === 'true';

@@ -8,7 +8,9 @@
  */
 
 import nunjucks from 'nunjucks';
-import { templatesDir } from '../config';
+
+import { NUNJUCKS_CACHE, templatesDir } from '../config';
+import { AssetService } from './assetService';
 import { evaluateFhirPath } from './fhirPath';
 import {
   barcodeFilter,
@@ -26,8 +28,10 @@ export function createEnvironment(locale: string): nunjucks.Environment {
   const cached = envCache.get(cacheKey);
   if (cached) return cached;
 
+  const assetService = new AssetService(templatesDir());
+
   const env = new nunjucks.Environment(
-    new nunjucks.FileSystemLoader(templatesDir(), { noCache: true }),
+    new nunjucks.FileSystemLoader(templatesDir(), { noCache: !NUNJUCKS_CACHE }),
     { autoescape: true, trimBlocks: true, lstripBlocks: true },
   );
 
@@ -50,6 +54,10 @@ export function createEnvironment(locale: string): nunjucks.Environment {
 
   env.addFilter('round', (value: number, decimals: number = 0): string =>
     roundValue(value, decimals),
+  );
+
+  env.addFilter('asset', (relativePath: unknown): string =>
+    assetService.toDataUri(relativePath),
   );
 
   envCache.set(cacheKey, env);

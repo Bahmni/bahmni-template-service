@@ -8,20 +8,20 @@
  */
 
 import { Request, Response } from 'express';
+
 import {
   DEFAULT_LOCALE,
   HEADER_AUTHORIZATION,
   HEADER_SESSION_ID,
   HTTP_STATUS,
   JSESSIONID_PREFIX,
-  LOCALE_REGEX,
-  RENDER_FORMAT,
-} from './constants';
-import { AppError } from './errors';
-import logger from './logger';
-import { executePipeline } from './template/renderPipeline';
-import { templateStore } from './template/store';
-import { AuthHeaders, RenderRequest } from './types';
+  MimeType,
+} from '../constants';
+import { AppError } from '../errors';
+import logger from '../logger';
+import { convertToPdf } from '../pdf/pdfPool';
+import { executePipeline } from '../template/renderPipeline';
+import { AuthHeaders, RenderRequest } from '../types';
 
 function extractAuthHeaders(req: Request): AuthHeaders {
   const rawCookie = req.headers.cookie;
@@ -39,11 +39,19 @@ function extractAuthHeaders(req: Request): AuthHeaders {
   };
 }
 
-export function listTemplates(_req: Request, res: Response): void {
-  const templates = templateStore
-    .list()
-    .map((t) => ({ id: t.id, name: t.name }));
-  res.json({ templates });
+function sendHtmlResponse(res: Response, html: string): void {
+  res.json({ html });
+}
+
+async function sendPdfResponse(
+  res: Response,
+  templateId: string,
+  html: string,
+): Promise<void> {
+  const pdfBuffer = await convertToPdf(html);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${templateId}.pdf"`);
+  res.send(pdfBuffer);
 }
 
 export async function renderTemplate(
@@ -52,30 +60,11 @@ export async function renderTemplate(
 ): Promise<void> {
   const {
     templateId,
-    format = RENDER_FORMAT,
+    format = MimeType.HTML,
     locale = DEFAULT_LOCALE,
     context,
     data,
   } = req.body as RenderRequest;
-
-  if (!templateId) {
-    res.status(400).json({ message: 'templateId is required' });
-    return;
-  }
-
-  if (format !== RENDER_FORMAT) {
-    res.status(HTTP_STATUS.BAD_REQUEST).json({
-      message: `Invalid format "${format}". Only "${RENDER_FORMAT}" is supported.`,
-    });
-    return;
-  }
-
-  if (!LOCALE_REGEX.test(locale)) {
-    res.status(HTTP_STATUS.BAD_REQUEST).json({
-      message: `Invalid locale "${locale}".`,
-    });
-    return;
-  }
 
   try {
     const html = await executePipeline({
@@ -85,7 +74,15 @@ export async function renderTemplate(
       data,
       auth: extractAuthHeaders(req),
     });
-    res.json({ html });
+
+    switch (format) {
+      case MimeType.HTML:
+        sendHtmlResponse(res, html);
+        break;
+      case MimeType.PDF:
+        await sendPdfResponse(res, templateId, html);
+        break;
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error({ templateId, message }, 'Render failed');
@@ -98,8 +95,4 @@ export async function renderTemplate(
       detail: message,
     });
   }
-}
-
-export function healthCheck(_req: Request, res: Response): void {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 }

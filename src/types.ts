@@ -18,7 +18,7 @@ export interface TemplateRegistry {
 }
 
 export interface DataSource {
-  api: 'fhir' | 'rest';
+  api: 'fhir' | 'rest' | 'image';
   resource: string;
   params?: Record<string, string | string[]>;
 }
@@ -38,9 +38,11 @@ export interface LoadedTemplate {
   stylesheetPath?: string;
 }
 
+export type RenderFormat = 'html' | 'pdf';
+
 export interface RenderRequest {
   templateId: string;
-  format?: 'html';
+  format?: RenderFormat;
   locale?: string;
   context?: Record<string, string>;
   data?: Record<string, unknown>;

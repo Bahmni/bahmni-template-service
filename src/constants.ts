@@ -42,9 +42,26 @@ export const HTTP_STATUS = {
   BAD_GATEWAY: 502,
 } as const;
 
-export const RENDER_FORMAT = 'html';
+export enum MimeType {
+  PNG = 'image/png',
+  JPEG = 'image/jpeg',
+  SVG = 'image/svg+xml',
+  PDF = 'pdf',
+  HTML = 'html',
+}
+
+export const RENDER_FORMATS = [MimeType.HTML, MimeType.PDF] as const;
+export const DEFAULT_MAX_CONCURRENT_PDF = 2;
+export const ASSETS_DIR = 'assets';
 
 export const API_BASE = '/template-service/api';
 export const TEMPLATES_PATH = `${API_BASE}/templates`;
 export const RENDER_PATH = `${API_BASE}/render`;
 export const HEALTH_PATH = '/template-service/health';
+
+export const SUPPORTED_IMAGE_MIME_TYPES: Record<string, string> = {
+  '.png': MimeType.PNG,
+  '.jpg': MimeType.JPEG,
+  '.jpeg': MimeType.JPEG,
+  '.svg': MimeType.SVG,
+};

@@ -13,7 +13,7 @@ import {
   renderBarcode,
   renderQRCode,
   round,
-} from './filters';
+} from '@src/template/filters';
 
 const mockToBuffer = jest.fn<Promise<Buffer>, any[]>(
   (jest.requireActual('bwip-js') as any).toBuffer,

@@ -97,8 +97,11 @@ bahmni-template-service/
    Custom filters (| t, | barcode, | qrcode, | dateFormat, | age, | round, …) run inline.
    render() is async because the | barcode filter uses bwip-js zlib streams.
 
-7. server.ts sends the HTML response.
-   The browser handles the print dialog.
+7. The response depends on the request "format":
+   - "html" (default) → server.ts sends { "html": "..." }; the browser handles the print dialog.
+   - "pdf"            → the rendered HTML is converted to a PDF by a pre-warmed Playwright
+                        (chromium) page pool (src/pdf/pdfPool.ts) and returned as
+                        application/pdf. Requires PDF_ENABLED=true.
 ```
 
 ---
@@ -145,21 +148,22 @@ Runs `compute.js` and renders the template.
 | Field | Required | Default | Description |
 |---|---|---|---|
 | `templateId` | Yes | — | Must match an `id` in `templates.json` |
-| `format` | No | `"html"` | Only `"html"` is supported |
+| `format` | No | `"html"` | `"html"` returns rendered HTML as JSON; `"pdf"` returns a PDF document (requires `PDF_ENABLED=true`) |
 | `locale` | No | `"en"` | BCP 47 language tag (e.g. `"fr"`, `"hi"`) |
 | `context` | No | `{}` | UUIDs forwarded to `data-config.json` placeholders and `compute.js` |
 | `data` | No | `{}` | Free-form object available as `{{ data.* }}` in templates and `data` in `compute.js` |
 
 **Responses**
 
-| Status | Body | Cause |
-|---|---|---|
-| `200` | `{ "html": "..." }` | Success |
-| `400` | `{ "message": "..." }` | Missing `templateId`, invalid `format`, or invalid `locale` |
-| `404` | `{ "message": "Template not found: ..." }` | `templateId` not in `templates.json` |
-| `401` | `{ "message": "OpenMRS session expired..." }` | Session cookie invalid or expired |
-| `502` | `{ "message": "OpenMRS API unreachable..." }` | OpenMRS timeout or network error |
-| `500` | `{ "message": "..." }` | Unexpected render error |
+| Status | Body | Cause                                                                                                                                                                                            |
+|---|---|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `200` | `{ "html": "..." }` | Success with `format: "html"` (`Content-Type: application/json`)                                                                                                                                 |
+| `200` | binary PDF | Success with `format: "pdf"` — `Content-Type: application/pdf`, `Content-Disposition: inline; filename="<templateId>.pdf"`                                                                       |
+| `400` | `{ "message": "..." }` | Missing `templateId`, invalid `format`, invalid `locale`, or `format: "pdf"` while PDF is disabled (`Error: PDF generation is not enabled`) |
+| `404` | `{ "message": "Template not found: ..." }` | `templateId` not in `templates.json`                                                                                                                                                             |
+| `401` | `{ "message": "OpenMRS session expired..." }` | Session cookie invalid or expired                                                                                                                                                                |
+| `502` | `{ "message": "OpenMRS API unreachable..." }` | OpenMRS timeout or network error                                                                                                                                                                 |
+| `500` | `{ "message": "..." }` | Unexpected render error                                                                                                                                                                          |
 
 ---
 
@@ -194,6 +198,9 @@ Copy `.env.example` to `.env` for local development.
 | `TEMPLATES_DIR` | `/etc/bahmni_config/print-templates` | Absolute path to the templates directory |
 | `OPENMRS_TIMEOUT_MS` | `10000` | Per-request timeout for OpenMRS calls made by `data-config.json` sources (ms) |
 | `LOG_LEVEL` | `info` | Log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) |
+| `PDF_ENABLED` | `false` | Master toggle for PDF output. When `false`, requests with `format: "pdf"` return `400`. Enabling it launches the Playwright browser pool at startup |
+| `MAX_CONCURRENT_PDF` | `2` | Size of the pre-warmed Playwright page pool — the number of PDFs rendered concurrently (excess requests queue) |
+| `NUNJUCKS_CACHE` | `false` | Cache compiled Nunjucks templates in memory. Leave `false` so template edits are picked up live; set `true` in production for throughput |
 
 ---
 
@@ -202,6 +209,9 @@ Copy `.env.example` to `.env` for local development.
 ```bash
 # 1. Install dependencies
 yarn install
+
+# 1.1. For pdf support 
+npx playwright install chromium
 
 # 2. Copy and edit env file
 cp .env.example .env
@@ -216,7 +226,16 @@ curl -s -X POST http://localhost:8080/template-service/api/render \
   -H "Content-Type: application/json" \
   -H "Cookie: JSESSIONID=<your-session-id>" \
   -d '{"templateId":"REG_CARD_V1","locale":"en","context":{"patientUuid":"<uuid>"}}'
+
+# 5. Render the same template as a PDF (requires PDF_ENABLED=true) and save it
+curl -s -X POST http://localhost:8080/template-service/api/render \
+  -H "Content-Type: application/json" \
+  -H "Cookie: JSESSIONID=<your-session-id>" \
+  -d '{"templateId":"REG_CARD_V1","format":"pdf","locale":"en","context":{"patientUuid":"<uuid>"}}' \
+  -o rendered.pdf
 ```
+
+> **PDF support requires a Chromium browser.** The Docker image is built on `mcr.microsoft.com/playwright:v1.61.1-noble`, which bundles it. For local PDF rendering, run `npx playwright install chromium` once after `yarn install`.
 
 ---
 

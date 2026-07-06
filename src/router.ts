@@ -8,13 +8,15 @@
  */
 
 import { Router } from 'express';
+
 import { HEALTH_PATH, RENDER_PATH, TEMPLATES_PATH } from './constants';
-import { healthCheck, listTemplates, renderTemplate } from './handlers';
+import { healthCheck, listTemplates, renderTemplate } from './controllers';
+import { validateRenderRequest } from './middleware/validateRenderRequest';
 
 const router = Router();
 
 router.get(TEMPLATES_PATH, listTemplates);
-router.post(RENDER_PATH, renderTemplate);
+router.post(RENDER_PATH, validateRenderRequest, renderTemplate);
 router.get(HEALTH_PATH, healthCheck);
 
 export default router;

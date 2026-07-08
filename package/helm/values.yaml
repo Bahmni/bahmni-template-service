@@ -23,6 +23,9 @@ config:
   OPENMRS_URL: "http://openmrs:8080"
   PORT: "8080"
   TEMPLATES_DIR: "/etc/bahmni_config/print-templates"
+  PDF_ENABLED: false
+  MAX_CONCURRENT_PDF: 2
+  NUNJUCKS_CACHE: false
 
 resources: {}  
 

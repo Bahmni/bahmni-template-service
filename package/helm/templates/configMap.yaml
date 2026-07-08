@@ -8,3 +8,6 @@ data:
   OPENMRS_URL: "{{ .Values.config.OPENMRS_URL }}"
   TEMPLATES_DIR: "{{ .Values.config.TEMPLATES_DIR }}"
   TZ: "{{ .Values.global.TZ }}"
+  PDF_ENABLED: "{{ .Values.config.PDF_ENABLED }}"
+  MAX_CONCURRENT_PDF: "{{ .Values.config.MAX_CONCURRENT_PDF }}"
+  NUNJUCKS_CACHE: "{{ .Values.config.NUNJUCKS_CACHE }}"

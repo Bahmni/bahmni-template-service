@@ -42,7 +42,6 @@ jobs:
       - run: yarn build
 
   build-publish-docker:
-    name: Build & Publish Docker Image
     runs-on: ubuntu-latest
     needs: build
     strategy:
@@ -50,8 +49,11 @@ jobs:
         include:
           - with_pdf: "false"
             tag_suffix: ""
+            build_name: "Docker Build (without PDF support)"
           - with_pdf: "true"
             tag_suffix: "-pdf"
+            build_name: "Docker Build (with PDF support)"
+    name: ${{ matrix.build_name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

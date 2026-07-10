@@ -13,6 +13,7 @@ import express from 'express';
 
 import { MAX_CONCURRENT_PDF, PDF_ENABLED, PORT, templatesDir } from './config';
 import { BODY_SIZE_LIMIT, SHUTDOWN_TIMEOUT_MS } from './constants';
+import { PdfNotSupportedError } from './errors';
 import logger from './logger';
 import { initPdfPool, shutdownPdfPool } from './pdf/pdfPool';
 import router from './router';
@@ -23,11 +24,21 @@ app.use(router);
 
 async function start(): Promise<http.Server> {
   if (PDF_ENABLED) {
-    await initPdfPool(MAX_CONCURRENT_PDF);
-    logger.info(
-      { concurrency: MAX_CONCURRENT_PDF },
-      'PDF pool initialised — Playwright/Chromium ready',
-    );
+    try {
+      await initPdfPool(MAX_CONCURRENT_PDF);
+      logger.info(
+        { concurrency: MAX_CONCURRENT_PDF },
+        'PDF pool initialised — Playwright/Chromium ready',
+      );
+    } catch (err) {
+      if (err instanceof PdfNotSupportedError) {
+        logger.warn(
+          'PDF_ENABLED=true but Playwright is not installed in this image. PDF requests will be rejected with 503. Switch to the -pdf tagged image to enable PDF generation.',
+        );
+      } else {
+        throw err;
+      }
+    }
   }
 
   return app.listen(PORT, () => {

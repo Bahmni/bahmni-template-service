@@ -9,6 +9,7 @@
 
 import { Request, Response } from 'express';
 
+import { HTTP_STATUS } from '@src/constants';
 import { renderTemplate } from '@src/controllers/renderTemplate';
 import { AppError, NotFoundError, UnauthorizedError } from '@src/errors';
 
@@ -323,6 +324,32 @@ describe('renderTemplate', () => {
         'Content-Type',
         'application/pdf',
       );
+    });
+
+    it('returns 503 when PDF is not supported by the image', async () => {
+      mockReq = {
+        headers: {},
+        body: { templateId: 'test-template', format: 'pdf' },
+      };
+
+      mockPipeline.executePipeline = jest
+        .fn()
+        .mockResolvedValue('<html>test</html>');
+      mockPdfPool.convertToPdf = jest
+        .fn()
+        .mockRejectedValue(
+          new AppError(
+            'PDF generation is not supported.',
+            HTTP_STATUS.SERVICE_UNAVAILABLE,
+          ),
+        );
+
+      await renderTemplate(mockReq as Request, mockRes as Response);
+
+      expect(statusSpy).toHaveBeenCalledWith(503);
+      expect(jsonSpy).toHaveBeenCalledWith({
+        message: 'PDF generation is not supported.',
+      });
     });
 
     it('sets Content-Disposition with template filename', async () => {

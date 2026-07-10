@@ -106,7 +106,7 @@ jobs:
         run: helm package $HELM_CHART_PATH
 
       - name: Checkout Charts Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Bahmni/helm-charts
           ref: gh-pages

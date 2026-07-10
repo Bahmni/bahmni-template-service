@@ -8,7 +8,6 @@
  */
 
 import { Request, Response } from 'express';
-
 import { healthCheck } from '@src/controllers/healthCheck';
 
 jest.mock('@src/config');

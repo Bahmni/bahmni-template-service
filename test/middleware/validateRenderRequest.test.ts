@@ -8,7 +8,6 @@
  */
 
 import { NextFunction, Request, Response } from 'express';
-
 import { validateRenderRequest } from '@src/middleware/validateRenderRequest';
 
 jest.mock('@src/config');

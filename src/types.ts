@@ -38,7 +38,8 @@ export interface LoadedTemplate {
   stylesheetPath?: string;
 }
 
-export type RenderFormat = (typeof import('./constants').RENDER_FORMATS)[number];
+export type RenderFormat =
+  (typeof import('./constants').RENDER_FORMATS)[number];
 
 export interface EmailAttachment {
   cid: string;

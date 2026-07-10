@@ -8,7 +8,6 @@
  */
 
 import { Request, Response } from 'express';
-
 import { renderTemplate } from '@src/controllers/renderTemplate';
 import { AppError, NotFoundError, UnauthorizedError } from '@src/errors';
 
@@ -20,7 +19,9 @@ jest.mock('@src/email/emailPostprocessor');
 const mockPipeline = jest.requireMock('@src/template/renderPipeline');
 const mockPdfPool = jest.requireMock('@src/pdf/pdfPool');
 const mockLogger = jest.requireMock('@src/logger');
-const mockEmailPostprocessor = jest.requireMock('@src/email/emailPostprocessor');
+const mockEmailPostprocessor = jest.requireMock(
+  '@src/email/emailPostprocessor',
+);
 
 describe('renderTemplate', () => {
   let mockReq: Partial<Request>;
@@ -296,16 +297,25 @@ describe('renderTemplate', () => {
       const emailResult = {
         html: '<html><body><img src="cid:img-1-123"></body></html>',
         attachments: [
-          { cid: 'img-1-123', content: 'AAAA', encoding: 'base64', contentType: 'image/png' },
+          {
+            cid: 'img-1-123',
+            content: 'AAAA',
+            encoding: 'base64',
+            contentType: 'image/png',
+          },
         ],
       };
 
       mockPipeline.executePipeline = jest.fn().mockResolvedValue(htmlContent);
-      mockEmailPostprocessor.processEmail = jest.fn().mockResolvedValue(emailResult);
+      mockEmailPostprocessor.processEmail = jest
+        .fn()
+        .mockResolvedValue(emailResult);
 
       await renderTemplate(mockReq as Request, mockRes as Response);
 
-      expect(mockEmailPostprocessor.processEmail).toHaveBeenCalledWith(htmlContent);
+      expect(mockEmailPostprocessor.processEmail).toHaveBeenCalledWith(
+        htmlContent,
+      );
       expect(jsonSpy).toHaveBeenCalledWith(emailResult);
     });
 
@@ -322,11 +332,16 @@ describe('renderTemplate', () => {
       const emailResult = { html: htmlContent, attachments: [] };
 
       mockPipeline.executePipeline = jest.fn().mockResolvedValue(htmlContent);
-      mockEmailPostprocessor.processEmail = jest.fn().mockResolvedValue(emailResult);
+      mockEmailPostprocessor.processEmail = jest
+        .fn()
+        .mockResolvedValue(emailResult);
 
       await renderTemplate(mockReq as Request, mockRes as Response);
 
-      expect(jsonSpy).toHaveBeenCalledWith({ html: htmlContent, attachments: [] });
+      expect(jsonSpy).toHaveBeenCalledWith({
+        html: htmlContent,
+        attachments: [],
+      });
     });
   });
 

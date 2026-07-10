@@ -25,9 +25,20 @@ export async function processEmail(html: string): Promise<EmailResult> {
 
   const processedHtml = inlinedHtml.replace(
     DATA_URI_IMG_REGEX,
-    (_match, pre: string, contentType: string, base64Data: string, post: string) => {
+    (
+      _match,
+      pre: string,
+      contentType: string,
+      base64Data: string,
+      post: string,
+    ) => {
       const cid = randomUUID();
-      attachments.push({ cid, content: base64Data, encoding: 'base64', contentType });
+      attachments.push({
+        cid,
+        content: base64Data,
+        encoding: 'base64',
+        contentType,
+      });
       return `<img ${pre}src="cid:${cid}"${post}>`;
     },
   );

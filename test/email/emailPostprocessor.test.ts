@@ -9,7 +9,10 @@
 
 import { processEmail } from '@src/email/emailPostprocessor';
 
-jest.mock('juice', () => ({ __esModule: true, default: jest.fn((html: string) => html) }));
+jest.mock('juice', () => ({
+  __esModule: true,
+  default: jest.fn((html: string) => html),
+}));
 const mockJuice = jest.requireMock('juice');
 
 describe('processEmail', () => {
@@ -19,7 +22,8 @@ describe('processEmail', () => {
   });
 
   it('passes html through juice for CSS inlining', async () => {
-    const html = '<html><head><style>.foo{color:red}</style></head><body></body></html>';
+    const html =
+      '<html><head><style>.foo{color:red}</style></head><body></body></html>';
 
     await processEmail(html);
 
@@ -30,8 +34,10 @@ describe('processEmail', () => {
   });
 
   it('inlines CSS by using the output of juice, not the original html', async () => {
-    const original = '<html><head><style>.foo{color:red}</style></head><body><p class="foo"></p></body></html>';
-    const inlined = '<html><head></head><body><p class="foo" style="color:red;"></p></body></html>';
+    const original =
+      '<html><head><style>.foo{color:red}</style></head><body><p class="foo"></p></body></html>';
+    const inlined =
+      '<html><head></head><body><p class="foo" style="color:red;"></p></body></html>';
     mockJuice.default.mockReturnValue(inlined);
 
     const result = await processEmail(original);

@@ -30,7 +30,12 @@ let waitQueue: Array<(page: Page) => void> = [];
 export async function initPdfPool(
   maxConcurrent: number = DEFAULT_MAX_CONCURRENT_PDF,
 ): Promise<void> {
-  const { chromium } = await import('playwright');
+  let chromium;
+  try {
+    ({ chromium } = await import('playwright'));
+  } catch {
+    throw new Error('PDF generation is not supported.');
+  }
   browser = await chromium.launch({
     args: ['--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage'],
   });

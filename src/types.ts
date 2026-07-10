@@ -38,7 +38,19 @@ export interface LoadedTemplate {
   stylesheetPath?: string;
 }
 
-export type RenderFormat = 'html' | 'pdf';
+export type RenderFormat = (typeof import('./constants').RENDER_FORMATS)[number];
+
+export interface EmailAttachment {
+  cid: string;
+  content: string;
+  encoding: 'base64';
+  contentType: string;
+}
+
+export interface EmailResult {
+  html: string;
+  attachments: EmailAttachment[];
+}
 
 export interface RenderRequest {
   templateId: string;

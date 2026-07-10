@@ -89,7 +89,7 @@ describe('validateRenderRequest', () => {
 
     expect(statusSpy).toHaveBeenCalledWith(400);
     expect(jsonSpy).toHaveBeenCalledWith({
-      message: 'Invalid format "xml". Supported formats: html, pdf.',
+      message: 'Invalid format "xml". Supported formats: html, pdf, email.',
     });
     expect(mockNext).not.toHaveBeenCalled();
   });
@@ -118,6 +118,20 @@ describe('validateRenderRequest', () => {
       body: {
         templateId: 'test',
         format: 'pdf',
+      },
+    };
+
+    validateRenderRequest(mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockNext).toHaveBeenCalledTimes(1);
+    expect(statusSpy).not.toHaveBeenCalled();
+  });
+
+  it('calls next() for email format', () => {
+    mockReq = {
+      body: {
+        templateId: 'test',
+        format: 'email',
       },
     };
 

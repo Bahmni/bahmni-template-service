@@ -15,10 +15,12 @@ import { AppError, NotFoundError, UnauthorizedError } from '@src/errors';
 jest.mock('@src/template/renderPipeline');
 jest.mock('@src/pdf/pdfPool');
 jest.mock('@src/logger');
+jest.mock('@src/email/emailPostprocessor');
 
 const mockPipeline = jest.requireMock('@src/template/renderPipeline');
 const mockPdfPool = jest.requireMock('@src/pdf/pdfPool');
 const mockLogger = jest.requireMock('@src/logger');
+const mockEmailPostprocessor = jest.requireMock('@src/email/emailPostprocessor');
 
 describe('renderTemplate', () => {
   let mockReq: Partial<Request>;
@@ -276,6 +278,55 @@ describe('renderTemplate', () => {
           data: { customField: 'value' },
         }),
       );
+    });
+  });
+
+  describe('email format response', () => {
+    it('returns JSON with html and attachments for email format', async () => {
+      mockReq = {
+        headers: {},
+        body: {
+          templateId: 'test-template',
+          format: 'email',
+        },
+      };
+
+      const htmlContent =
+        '<html><body><img src="data:image/png;base64,AAAA"></body></html>';
+      const emailResult = {
+        html: '<html><body><img src="cid:img-1-123"></body></html>',
+        attachments: [
+          { cid: 'img-1-123', content: 'AAAA', encoding: 'base64', contentType: 'image/png' },
+        ],
+      };
+
+      mockPipeline.executePipeline = jest.fn().mockResolvedValue(htmlContent);
+      mockEmailPostprocessor.processEmail = jest.fn().mockResolvedValue(emailResult);
+
+      await renderTemplate(mockReq as Request, mockRes as Response);
+
+      expect(mockEmailPostprocessor.processEmail).toHaveBeenCalledWith(htmlContent);
+      expect(jsonSpy).toHaveBeenCalledWith(emailResult);
+    });
+
+    it('returns empty attachments when no inline images present', async () => {
+      mockReq = {
+        headers: {},
+        body: {
+          templateId: 'test-template',
+          format: 'email',
+        },
+      };
+
+      const htmlContent = '<html><body>No images</body></html>';
+      const emailResult = { html: htmlContent, attachments: [] };
+
+      mockPipeline.executePipeline = jest.fn().mockResolvedValue(htmlContent);
+      mockEmailPostprocessor.processEmail = jest.fn().mockResolvedValue(emailResult);
+
+      await renderTemplate(mockReq as Request, mockRes as Response);
+
+      expect(jsonSpy).toHaveBeenCalledWith({ html: htmlContent, attachments: [] });
     });
   });
 

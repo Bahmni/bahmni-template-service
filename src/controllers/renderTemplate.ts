@@ -17,6 +17,7 @@ import {
   JSESSIONID_PREFIX,
   MimeType,
 } from '../constants';
+import { processEmail } from '../email/emailPostprocessor';
 import { AppError } from '../errors';
 import logger from '../logger';
 import { convertToPdf } from '../pdf/pdfPool';
@@ -81,6 +82,9 @@ export async function renderTemplate(
         break;
       case MimeType.PDF:
         await sendPdfResponse(res, templateId, html);
+        break;
+      case MimeType.EMAIL:
+        res.json(await processEmail(html));
         break;
     }
   } catch (err: unknown) {

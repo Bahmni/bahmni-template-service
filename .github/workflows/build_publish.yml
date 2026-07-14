@@ -81,8 +81,8 @@ jobs:
           build-args: WITH_PDF=${{ matrix.with_pdf }}
           push: true
           tags: |
-            mohantk/bahmni-template-service:${{ needs.build.outputs.artifact_version }}${{ matrix.tag_suffix }}
-            mohantk/bahmni-template-service:latest${{ matrix.tag_suffix }}
+            bahmni/bahmni-template-service:${{ needs.build.outputs.artifact_version }}${{ matrix.tag_suffix }}
+            bahmni/bahmni-template-service:latest${{ matrix.tag_suffix }}
 
   publish-helm:
     name: Publish Helm Chart

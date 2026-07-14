@@ -49,9 +49,14 @@ export enum MimeType {
   SVG = 'image/svg+xml',
   PDF = 'pdf',
   HTML = 'html',
+  EMAIL = 'email',
 }
 
-export const RENDER_FORMATS = [MimeType.HTML, MimeType.PDF] as const;
+export const RENDER_FORMATS = [
+  MimeType.HTML,
+  MimeType.PDF,
+  MimeType.EMAIL,
+] as const;
 export const DEFAULT_MAX_CONCURRENT_PDF = 2;
 export const ASSETS_DIR = 'assets';
 

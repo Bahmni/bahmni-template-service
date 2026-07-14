@@ -19,6 +19,7 @@
     "bwip-js": "^3.3.0",
     "express": "^4.19.2",
     "fhirpath": "^3.13.0",
+    "juice": "^12.1.1",
     "nunjucks": "^3.2.4",
     "playwright": "^1.61.1"
   },

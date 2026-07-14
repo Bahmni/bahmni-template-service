@@ -8,7 +8,6 @@
  */
 
 import { Request, Response } from 'express';
-
 import { listTemplates } from '@src/controllers/listTemplates';
 
 jest.mock('@src/template/store');

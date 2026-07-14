@@ -94,6 +94,8 @@ describe('processEmail', () => {
 
     expect(result.attachments).toHaveLength(1);
     const cid = result.attachments[0].cid;
-    expect(result.html).toBe(`<img src="cid:${cid}"><p></p><img src="cid:${cid}">`);
+    expect(result.html).toBe(
+      `<img src="cid:${cid}"><p></p><img src="cid:${cid}">`,
+    );
   });
 });

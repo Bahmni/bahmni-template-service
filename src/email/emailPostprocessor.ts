@@ -22,6 +22,7 @@ export async function processEmail(html: string): Promise<EmailResult> {
   });
 
   const attachments: EmailAttachment[] = [];
+  const cidsByContent = new Map<string, string>();
 
   const processedHtml = inlinedHtml.replace(
     DATA_URI_IMG_REGEX,
@@ -32,13 +33,18 @@ export async function processEmail(html: string): Promise<EmailResult> {
       base64Data: string,
       post: string,
     ) => {
-      const cid = randomUUID();
-      attachments.push({
-        cid,
-        content: base64Data,
-        encoding: 'base64',
-        contentType,
-      });
+      const contentKey = `${contentType}:${base64Data}`;
+      let cid = cidsByContent.get(contentKey);
+      if (!cid) {
+        cid = randomUUID();
+        cidsByContent.set(contentKey, cid);
+        attachments.push({
+          cid,
+          content: base64Data,
+          encoding: 'base64',
+          contentType,
+        });
+      }
       return `<img ${pre}src="cid:${cid}"${post}>`;
     },
   );

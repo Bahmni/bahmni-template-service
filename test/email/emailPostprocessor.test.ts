@@ -85,4 +85,15 @@ describe('processEmail', () => {
     const expectedCid = result.attachments[0].cid;
     expect(result.html).toContain(`src="cid:${expectedCid}"`);
   });
+
+  it('deduplicates identical images so they are attached once and share the same cid', async () => {
+    const html =
+      '<img src="data:image/png;base64,LOGO"><p></p><img src="data:image/png;base64,LOGO">';
+
+    const result = await processEmail(html);
+
+    expect(result.attachments).toHaveLength(1);
+    const cid = result.attachments[0].cid;
+    expect(result.html).toBe(`<img src="cid:${cid}"><p></p><img src="cid:${cid}">`);
+  });
 });

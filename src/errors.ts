@@ -47,3 +47,11 @@ export class BadGatewayError extends AppError {
     this.name = 'BadGatewayError';
   }
 }
+
+export class PdfNotSupportedError extends Error {
+  constructor() {
+    super('PDF generation is not supported.');
+    this.name = 'PdfNotSupportedError';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

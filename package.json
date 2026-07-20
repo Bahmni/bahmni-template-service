@@ -15,7 +15,7 @@
     "format:check": "prettier --check src test"
   },
   "dependencies": {
-    "axios": "^1.7.2",
+    "axios": "^1.18.0",
     "bwip-js": "^3.3.0",
     "express": "^4.19.2",
     "fhirpath": "^3.13.0",

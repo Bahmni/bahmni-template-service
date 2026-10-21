@@ -9,14 +9,14 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
-  build-publish-docker:
-    name: Build & Publish Docker Image
+  build:
+    name: Lint, Test & Build
     runs-on: ubuntu-latest
-    env:
-      HELM_CHART_PATH: package/helm/
+    outputs:
+      artifact_version: ${{ steps.version.outputs.artifact_version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set env.ARTIFACT_VERSION
         run: |
@@ -24,8 +24,12 @@ jobs:
           ./setArtifactVersion.sh .appversion
           rm setArtifactVersion.sh
 
+      - name: Capture artifact version
+        id: version
+        run: echo "artifact_version=${{ env.ARTIFACT_VERSION }}" >> $GITHUB_OUTPUT
+
       - name: Setup Node.js 24.x
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24.x"
           cache: "yarn"
@@ -38,31 +42,62 @@ jobs:
 
       - run: yarn build
 
+  build-publish-docker:
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - with_pdf: "false"
+            tag_suffix: ""
+            build_name: "Docker Build (without PDF support)"
+          - with_pdf: "true"
+            tag_suffix: "-pdf"
+            build_name: "Docker Build (with PDF support)"
+    name: ${{ matrix.build_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to DockerHub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Docker - Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           file: Dockerfile
+          build-args: WITH_PDF=${{ matrix.with_pdf }}
           push: true
-          tags: bahmni/bahmni-template-service:${{ env.ARTIFACT_VERSION }},bahmni/bahmni-template-service:latest
+          tags: |
+            bahmni/bahmni-template-service:${{ needs.build.outputs.artifact_version }}${{ matrix.tag_suffix }}
+            bahmni/bahmni-template-service:latest${{ matrix.tag_suffix }}
+
+  publish-helm:
+    name: Publish Helm Chart
+    runs-on: ubuntu-latest
+    needs: [build, build-publish-docker]
+    env:
+      HELM_CHART_PATH: package/helm/
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
       - name: Update Version and Image Tag
         run: |
-          yq --inplace '.image.tag = "${{ env.ARTIFACT_VERSION }}"' $HELM_CHART_PATH/values.yaml
-          yq --inplace '.version = "${{ env.ARTIFACT_VERSION }}"' $HELM_CHART_PATH/Chart.yaml
+          yq --inplace '.image.tag = "${{ needs.build.outputs.artifact_version }}"' $HELM_CHART_PATH/values.yaml
+          yq --inplace '.version = "${{ needs.build.outputs.artifact_version }}"' $HELM_CHART_PATH/Chart.yaml
+
       - name: Helm Lint
         run: helm lint $HELM_CHART_PATH
 
@@ -70,7 +105,7 @@ jobs:
         run: helm package $HELM_CHART_PATH
 
       - name: Checkout Charts Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           repository: Bahmni/helm-charts
           ref: gh-pages
@@ -78,7 +113,7 @@ jobs:
           persist-credentials: false
 
       - name: Copy Helm Archive
-        run: mkdir -p helm-charts/template-service/ && cp template-service-${{ env.ARTIFACT_VERSION }}.tgz helm-charts/template-service/
+        run: mkdir -p helm-charts/template-service/ && cp template-service-${{ needs.build.outputs.artifact_version }}.tgz helm-charts/template-service/
 
       - name: Helm Index
         working-directory: helm-charts/
@@ -90,5 +125,5 @@ jobs:
           git config user.name ${{ secrets.BAHMNI_USERNAME}}
           git config user.email ${{ secrets.BAHMNI_EMAIL}}
           git add .
-          git commit -m "Release of template-service-${{ env.ARTIFACT_VERSION }}"
-          git push 'https://${{ secrets.BAHMNI_USERNAME}}:${{ secrets.BAHMNI_PAT}}@github.com/bahmni/helm-charts.git' gh-pages    
+          git commit -m "Release of template-service-${{ needs.build.outputs.artifact_version }}"
+          git push 'https://${{ secrets.BAHMNI_USERNAME}}:${{ secrets.BAHMNI_PAT}}@github.com/bahmni/helm-charts.git' gh-pages

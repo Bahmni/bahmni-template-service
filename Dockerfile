@@ -1,17 +1,27 @@
-FROM mcr.microsoft.com/playwright:v1.61.1-noble
+ARG WITH_PDF=false
 
-RUN apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-
+FROM node:24-alpine AS builder
 WORKDIR /app
-
 COPY package.json yarn.lock tsconfig.json ./
 COPY src/ ./src/
+RUN PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 yarn install --frozen-lockfile && \
+    yarn build
 
-RUN yarn install --frozen-lockfile && \
-    yarn build && \
-    yarn install --production && \
-    yarn cache clean && \
-    rm -rf src/ tsconfig.json
+FROM node:24-alpine AS pdf-false
+FROM mcr.microsoft.com/playwright:v1.61.1-noble AS pdf-true
+
+
+FROM pdf-${WITH_PDF} AS final
+WORKDIR /app
+COPY package.json yarn.lock ./
+
+ARG WITH_PDF
+RUN if [ "$WITH_PDF" = "true" ]; then \
+      yarn install --production; \
+    else \
+      yarn install --production --ignore-optional; \
+    fi && yarn cache clean
+COPY --from=builder /app/dist ./dist
 
 ENV NODE_ENV=production
 ENV PORT=8080

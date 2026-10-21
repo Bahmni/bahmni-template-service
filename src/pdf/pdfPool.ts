@@ -9,7 +9,8 @@
 
 import type { Browser, Page } from 'playwright';
 
-import { DEFAULT_MAX_CONCURRENT_PDF } from '../constants';
+import { DEFAULT_MAX_CONCURRENT_PDF, HTTP_STATUS } from '../constants';
+import { AppError, PdfNotSupportedError } from '../errors';
 import logger from '../logger';
 
 export interface PageSettings {
@@ -30,13 +31,22 @@ let waitQueue: Array<(page: Page) => void> = [];
 export async function initPdfPool(
   maxConcurrent: number = DEFAULT_MAX_CONCURRENT_PDF,
 ): Promise<void> {
-  const { chromium } = await import('playwright');
-  browser = await chromium.launch({
-    args: ['--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage'],
-  });
-
-  for (let i = 0; i < maxConcurrent; i++) {
-    pagePool.push(await browser.newPage());
+  let chromium;
+  try {
+    ({ chromium } = await import('playwright'));
+  } catch {
+    throw new PdfNotSupportedError();
+  }
+  try {
+    browser = await chromium.launch({
+      args: ['--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage'],
+    });
+    for (let i = 0; i < maxConcurrent; i++) {
+      pagePool.push(await browser.newPage());
+    }
+  } catch (error) {
+    logger.error({ err: error }, 'PDF pool initialisation failed');
+    throw new PdfNotSupportedError();
   }
 }
 
@@ -70,8 +80,9 @@ export async function convertToPdf(
   pageSettings: PageSettings = {},
 ): Promise<Buffer> {
   if (!browser) {
-    throw new Error(
-      'PDF pool not initialised. Call initPdfPool() before converting to PDF.',
+    throw new AppError(
+      'PDF generation is not supported.',
+      HTTP_STATUS.SERVICE_UNAVAILABLE,
     );
   }
 

@@ -7,6 +7,7 @@
  * and the Thoughtworks graphic logo is a trademark of Thoughtworks Inc.
  */
 
+import { AppError, PdfNotSupportedError } from '@src/errors';
 import {
   convertToPdf,
   initPdfPool,
@@ -98,15 +99,23 @@ describe('initPdfPool', () => {
       }),
     );
   });
+
+  it('throws PdfNotSupportedError when browser launch fails', async () => {
+    mockLaunch.mockRejectedValueOnce(
+      new Error('Executable does not exist at /path/to/chromium'),
+    );
+    const err = await initPdfPool(1).catch((e) => e);
+    expect(err).toBeInstanceOf(PdfNotSupportedError);
+  });
 });
 
 describe('convertToPdf', () => {
   afterEach(async () => resetPool());
 
-  it('throws when the pool is not initialised', async () => {
-    await expect(convertToPdf('<html/>')).rejects.toThrow(
-      'PDF pool not initialised',
-    );
+  it('throws AppError 503 when the pool is not initialised', async () => {
+    const err = await convertToPdf('<html/>').catch((e) => e);
+    expect(err).toBeInstanceOf(AppError);
+    expect((err as AppError).statusCode).toBe(503);
   });
 
   it('returns a Buffer containing PDF bytes', async () => {

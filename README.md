@@ -235,7 +235,7 @@ curl -s -X POST http://localhost:8080/template-service/api/render \
   -o rendered.pdf
 ```
 
-> **PDF support requires a Chromium browser.** The Docker image is built on `mcr.microsoft.com/playwright:v1.61.1-noble`, which bundles it. For local PDF rendering, run `npx playwright install chromium` once after `yarn install`.
+> **PDF support requires a Chromium browser.** The Docker image is built on the `mcr.microsoft.com/playwright` `-noble` image matching the pinned `playwright` version in `package.json`, which bundles it. For local PDF rendering, run `npx playwright install chromium` once after `yarn install`.
 
 ---
 
